@@ -10,8 +10,8 @@ import { WinstonLoggerService } from './common/utils/winston-logger.service';
 import { validateEnvVariables } from './config/env/env.validator';
 import * as dotenv from 'dotenv';
 import * as bodyParser from 'body-parser';
-import * as cookieParser from 'cookie-parser';
-// import cookieParser from 'cookie-parser';
+// import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import { AutoParseJsonPipe } from './common/pipes/auto-parse-json.pipe';
 import { booleanNormalizer } from './common/middleware/boolean-normalizer.middleware';
 // Load environment variables
