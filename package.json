@@ -8,7 +8,7 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "cross-env NODE_OPTIONS=--max-old-space-size=1024 nest start",
+    "start": "cross-env NODE_OPTIONS=--max-old-space-size=384 nest start",
     "start:dev": "cross-env NODE_ENV=development nodemon --watch src --ext ts --exec \"ts-node -r tsconfig-paths/register src/main.ts\"",
     "start:qa": "cross-env NODE_ENV=qa nodemon --watch src --ext ts --exec \"ts-node -r tsconfig-paths/register src/main.ts\"",
     "start:prod": "cross-env NODE_ENV=production node dist/main",
