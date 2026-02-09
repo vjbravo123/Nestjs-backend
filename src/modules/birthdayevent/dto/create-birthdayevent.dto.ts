@@ -15,7 +15,7 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { parseStringifiedArray } from '../../../common/utils/parse-stringified-array.util';
 import { ToBoolean } from 'src/common/utils/transFormTOBoolean';
-import { ParseBoolean } from 'src/common/utils/parseToBoolean';
+import { ParseBoolean } from '../../../../src/common/utils/parseToBoolean';
 
 export class RangeDto {
     @IsNumber()
