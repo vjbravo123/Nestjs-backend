@@ -63,7 +63,6 @@ export class CityDto {
 
 
 }
-
 export class CreateBirthdayEventDto {
     @IsString()
     title: string;
