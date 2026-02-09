@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Welcome to Zappy Partner – Registration Successful</title>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f5f3ff;
+        font-family: "Segoe UI", Arial, sans-serif;
+        color: #1f2937;
+      }
+
+      .wrapper {
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+
+      .card {
+        background: #ffffff;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.18);
+      }
+
+      /* HEADER */
+      .header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        background: linear-gradient(135deg, #7331e650, #e33d9050);
+        padding: 20px 36px;
+        border-bottom: 1px solid #ede9fe;
+      }
+
+      .status {
+        background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        color: #ffffff;
+        padding: 8px 18px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .logo {
+        height: 52px;
+      }
+
+      .header-text {
+        text-align: center;
+        font-size: 14.5px;
+        color: #6b7280;
+      }
+
+      .header-text strong {
+        color: #7c3aed;
+      }
+
+      /* MAIN */
+      .main {
+        padding: 44px 28px 36px;
+      }
+
+      .main h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      .subtitle {
+        margin-top: 10px;
+        font-size: 16px;
+        color: #2563eb;
+        font-weight: 600;
+      }
+
+      .divider {
+        height: 1px;
+        background: linear-gradient(to right, #7c3aed, #ec4899, #f59e0b);
+        margin: 30px 0;
+      }
+
+      .main p {
+        font-size: 15.8px;
+        line-height: 1.95;
+      }
+
+      /* DETAILS BOX */
+      .box {
+        background: linear-gradient(135deg, #faf5ff, #fdf2f8);
+        border-radius: 18px;
+        padding: 26px;
+        margin: 30px 0;
+        border: 1px solid #f3e8ff;
+      }
+
+      .box h3 {
+        margin-bottom: 16px;
+        font-size: 18px;
+        color: #7c3aed;
+      }
+
+      .detail {
+        margin: 10px 0;
+        font-size: 15px;
+      }
+
+      /* NEXT STEP NOTE */
+      .note {
+        background: #ecfeff;
+        border-radius: 16px;
+        padding: 24px;
+        margin: 28px 0;
+        border: 1px solid #cffafe;
+      }
+
+      .note strong {
+        color: #0f766e;
+      }
+
+      /* CTA */
+      .cta {
+        margin: 42px 0 24px;
+        text-align: center;
+      }
+
+      .cta a {
+        display: inline-block;
+        padding: 16px 52px;
+        background: linear-gradient(135deg, #7c3aed, #ec4899);
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 999px;
+        box-shadow: 0 6px 12px rgba(133, 75, 234, 0.35);
+      }
+
+      /* SUPPORT */
+      .support {
+        background: #fdf2f8;
+        border-radius: 16px;
+        padding: 24px;
+        margin: 30px 0;
+        border: 1px solid #fbcfe8;
+        font-size: 15px;
+      }
+
+      .support strong {
+        color: #7c3aed;
+      }
+
+      /* SIGNATURE */
+      .signature {
+        margin-top: 36px;
+        font-size: 15px;
+        color: #374151;
+      }
+
+      /* FOOTER */
+      .footer {
+        background: #120a2a;
+        padding: 20px;
+        text-align: center;
+        font-size: 13px;
+        color: #c4b5fd;
+      }
+
+      .footer a {
+        padding: 4px;
+        color: #f9a8d4;
+        text-decoration: none;
+      }
+
+      .footer strong {
+        color: #f9a8d4;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <div class="card">
+
+        <!-- HEADER -->
+        <div class="header">
+          <img
+            src="https://zappyevent.s3.ap-south-1.amazonaws.com/zappy_logos/zappy.png"
+            class="logo"
+          />
+
+          <div class="header-text">
+            Welcome to <strong>Zappy Partner Network</strong>
+          </div>
+
+          <div class="status">Registration Successful</div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="main">
+          <h1>Welcome to Zappy 🎉</h1>
+          <div class="subtitle">Your vendor account has been created successfully</div>
+
+          <div class="divider"></div>
+
+          <p>Hello <strong>{{partnerName}}</strong>,</p>
+
+          <p>
+            Thank you for registering as a <strong>Zappy Partner</strong>.
+            We’re excited to have you onboard! You can now access your vendor dashboard,
+            add your services, upload details, and complete your partner profile.
+          </p>
+
+          <!-- DETAILS BOX -->
+          <div class="box">
+            <h3>🧑‍💼 Your Partner Account Details</h3>
+
+            <div class="detail"><strong>Partner Name:</strong> {{partnerName}}</div>
+            <div class="detail"><strong>Email:</strong> {{partnerEmail}}</div>
+            <div class="detail"><strong>Phone:</strong> {{partnerPhone}}</div>
+            <div class="detail"><strong>Registration Date:</strong> {{registerDate}}</div>
+          </div>
+
+          <!-- NEXT STEPS -->
+          <div class="note">
+            <strong>🚀 Next Steps</strong><br /><br />
+            ✔ Upload service packages and photos  <br />
+            ✔ Add pricing & availability  <br />
+            ✔ Submit your profile for verification  <br />
+            ✔ Start receiving bookings from customers
+          </div>
+
+          <!-- CTA -->
+          <div class="cta">
+            <a href="https://zappyeventz.com/vendor/dashboard" target="_blank">
+              Open Partner Dashboard
+            </a>
+          </div>
+
+          <!-- SUPPORT -->
+          <div class="support">
+            <strong>💬 Need Help?</strong><br /><br />
+
+            📧 Email:
+            <a href="mailto:support@zappyeventz.com" style="color:#7c3aed;">support@zappyeventz.com</a>
+            <br /><br />
+
+            📞 Phone: +91 9514338368 <br /><br />
+
+            💬 WhatsApp:
+            <a href="https://wa.me/919514338368" style="color:#16a34a;font-weight:600;">Chat with us</a>
+          </div>
+
+          <div class="signature">
+            Warm regards,<br />
+            <strong>Team Zappy</strong><br />
+            Vendor Onboarding & Partner Support
+          </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+          © 2026 <strong>Zappy Events</strong><br />
+          <a href="https://zappyeventz.com" target="_blank">www.zappyeventz.com</a><br />
+          Thanks for joining the Zappy Partner ecosystem.
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>

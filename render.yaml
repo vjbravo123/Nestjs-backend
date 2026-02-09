@@ -1,0 +1,167 @@
+# Environment Groups - shared variables across services
+envVarGroups:
+  - name: zappy-common
+    envVars:
+      - key: AWS_REGION
+        value: ap-south-1
+      - key: AWS_ACCESS_KEY_ID
+        sync: false  # Set in Render Dashboard
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false  # Set in Render Dashboard
+      - key: MSG91_AUTH_KEY
+        sync: false  # Set in Render Dashboard
+      - key: MSG91_INTEGRATED_NUMBER
+        sync: false  # Set in Render Dashboard
+      - key: MSG91_NAMESPACE
+        sync: false  # Set in Render Dashboard
+      - key: MSG91_AUTHKEY
+        sync: false  # Set in Render Dashboard (Email Auth)
+      - key: MSG91_EMAIL_DOMAIN
+        sync: false  # Set in Render Dashboard
+      - key: MSG91_FROM_EMAIL
+        sync: false  # Set in Render Dashboard
+      - key: JWT_SECRET
+        generateValue: true  # Generate random secret
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FCM_PROJECT_ID
+        sync: false  # Set in Render Dashboard
+      - key: FCM_CLIENT_EMAIL
+        sync: false  # Set in Render Dashboard
+      - key: FCM_PRIVATE_KEY
+        sync: false  # Set in Render Dashboard
+      - key: PHONEPE_CLIENT_ID
+        sync: false  # Set in Render Dashboard
+      - key: PHONEPE_CLIENT_SECRET
+        sync: false  # Set in Render Dashboard
+      - key: PHONEPE_CLIENT_VERSION
+        value: 1
+      - key: PHONEPE_WEBHOOK_USERNAME
+        sync: false  # Set in Render Dashboard
+      - key: PHONEPE_WEBHOOK_PASSWORD
+        sync: false  # Set in Render Dashboard
+
+  - name: zappy-dev
+    envVars:
+      - key: NODE_ENV
+        value: development
+      - key: MONGODB_URL
+        sync: false  # Set in Render Dashboard
+      - key: AWS_S3_BUCKET
+        value: zappy-dev-bucket
+      - key: FRONTEND_URL
+        value: https://dev.zappyeventz.com
+
+  - name: zappy-qa
+    envVars:
+      - key: NODE_ENV
+        value: qa
+      - key: MONGODB_URL
+        sync: false  # Set in Render Dashboard
+      - key: AWS_S3_BUCKET
+        value: zappy-qa-bucket
+      - key: FRONTEND_URL
+        value: https://qa.zappyeventz.com
+      - key: MSG91_SENDER_ID
+        value: ZAPPYQA
+
+  - name: zappy-prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URL
+        sync: false  # Set in Render Dashboard
+      - key: AWS_S3_BUCKET
+        value: zappy-prod-bucket
+      - key: FRONTEND_URL
+        value: https://zappyeventz.com
+
+services:
+  # Development Environment
+  - type: web
+    name: zappy-api-dev
+    env: node
+    plan: starter
+    branch: dev
+    region: singapore  # Change to your preferred region
+    buildCommand: npm install && npm run build:dev
+    startCommand: npm run start:dev:prod
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: development
+      - key: REDIS_URL
+        fromService:
+          name: zappy-redis
+          type: keyvalue
+          property: connectionString
+      - fromGroup: zappy-common
+      - fromGroup: zappy-dev
+    autoDeploy: true
+
+  # QA/Staging Environment
+  - type: web
+    name: zappy-api-qa
+    env: node
+    plan: starter
+    branch: qa
+    region: singapore  # Change to your preferred region
+    buildCommand: npm install && npm run build:qa
+    startCommand: npm run start:qa:prod
+    domains:
+      - api-qa.zappyeventz.com
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: qa
+      - key: REDIS_URL
+        fromService:
+          name: zappy-redis
+          type: keyvalue
+          property: connectionString
+      - fromGroup: zappy-common
+      - fromGroup: zappy-qa
+    autoDeploy: true
+
+  # Production Environment (Free tier for now, upgrade later)
+  - type: web
+    name: zappy-api-prod
+    env: node
+    plan: starter
+    branch: main
+    region: singapore  # Change to your preferred region
+    buildCommand: npm install && npm run build:prod
+    startCommand: npm run start:prod
+    domains:
+      - api.zappyeventz.com
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        fromService:
+          name: zappy-redis
+          type: keyvalue
+          property: connectionString
+      - fromGroup: zappy-common
+      - fromGroup: zappy-prod
+    autoDeploy: true
+
+  # Redis Cache/Queue Service (shared across all environments)
+  - type: keyvalue
+    name: zappy-redis
+    plan: starter
+    region: singapore
+    ipAllowList: []  # Allow connections from all Render services
+
+# Note: Free tier limitations
+# - Automatically spins down after 15 minutes of inactivity
+# - Cold starts take 30-60 seconds
+# - 750 hours/month free (shared across services)
+# - Upgrade to Starter ($7/month) for 24/7 uptime

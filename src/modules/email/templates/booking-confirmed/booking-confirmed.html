@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Your Booking is Confirmed – Zappy</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f5f3ff;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #1f2937;
+    }
+
+    /* WRAPPER */
+    .wrapper {
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    /* CARD */
+    .card {
+      background: #ffffff;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.18);
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, #7331e650, #e33d9050);
+      padding: 20px 36px;
+      border-bottom: 1px solid #ede9fe;
+    }
+
+    .status {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .logo {
+      height: 52px;
+    }
+
+    .header-text {
+      text-align: center;
+      font-size: 14.5px;
+      color: #6b7280;
+    }
+
+    .header-text strong {
+      color: #7c3aed;
+    }
+
+    /* MAIN */
+    .main {
+      padding: 44px 28px 36px;
+    }
+
+    .main h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    /* DIVIDER */
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, #7c3aed, #ec4899, #f59e0b);
+      margin: 30px 0;
+    }
+
+    .main p {
+      font-size: 15.8px;
+      line-height: 1.95;
+      margin: 18px 0;
+    }
+
+    /* BOOKING BOX */
+    .booking-box {
+      background: linear-gradient(135deg, #faf5ff, #fdf2f8);
+      border-radius: 18px;
+      padding: 26px;
+      margin: 30px 0;
+      border: 1px solid #f3e8ff;
+    }
+
+    .booking-box h3 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #7c3aed;
+    }
+
+    .detail {
+      margin: 10px 0;
+      font-size: 15px;
+    }
+
+    /* NOTE */
+    .note {
+      background: #fdf2f8;
+      border-radius: 16px;
+      padding: 24px;
+      margin: 28px 0;
+      border: 1px solid #fbcfe8;
+    }
+
+    .note strong {
+      color: #7c3aed;
+    }
+
+    /* CTA */
+    .cta {
+      margin: 42px 0 24px;
+      text-align: center;
+    }
+
+    .cta a {
+      display: inline-block;
+      padding: 16px 52px;
+      background: linear-gradient(135deg, #7c3aed, #ec4899);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 999px;
+    }
+
+    /* SIGNATURE */
+    .signature {
+      margin-top: 36px;
+      font-size: 15px;
+      color: #374151;
+    }
+
+    /* FOOTER */
+    .footer {
+      background: #120a2a;
+      padding: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #c4b5fd;
+    }
+
+    .footer a {
+      color: #f9a8d4;
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="card">
+
+      <!-- HEADER -->
+      <div class="header">
+        <img src="https://zappyevent.s3.ap-south-1.amazonaws.com/zappy_logos/zappy.png" alt="Zappy Logo" class="logo" />
+        <div class="header-text">
+          Official booking confirmation from <strong>Zappy</strong>
+        </div>
+        <div class="status">Booking Confirmed</div>
+      </div>
+
+      <!-- MAIN -->
+      <div class="main">
+        <h1>Booking Confirmed 🎊</h1>
+        <div class="subtitle">
+          Your event booking has been successfully confirmed
+        </div>
+
+        <div class="divider"></div>
+
+        <p>Hello <strong>{{userName}}</strong>,</p>
+
+        <p>
+          Thank you for booking with <strong>Zappy</strong>. Below are your
+          confirmed booking details.
+        </p>
+
+        <!-- MULTIPLE BOOKINGS -->
+        {{#each bookingDetails}}
+        <div class="booking-box">
+          <h3>📋 Booking Details</h3>
+
+          <div class="detail">
+            <strong>Booking ID:</strong> {{this.bookingId}}
+          </div>
+
+          <div class="detail">
+            <strong>Event:</strong> {{this.eventName}}
+          </div>
+
+          <div class="detail">
+            <strong>Date & Time:</strong> {{this.eventDateTime}}
+          </div>
+
+          <div class="detail">
+            <strong>Venue:</strong> {{this.venue}}
+          </div>
+
+          <div class="detail">
+            <strong>Amount Paid:</strong> ₹{{this.amount}}
+          </div>
+
+          <div class="detail">
+            <strong>Payment Status:</strong> {{this.paymentStatus}}
+          </div>
+        </div>
+        {{/each}}
+
+        <!-- SUPPORT -->
+        <div class="note">
+          <strong>💬 Need help with your booking?</strong><br /><br />
+          📧 support@zappyeventz.com<br />
+          📞 +91 9514338368<br />
+          💬 <a href="https://wa.me/919514338368" target="_blank">
+            Chat on WhatsApp
+          </a>
+        </div>
+
+        <div class="cta">
+          <a href="https://zappyeventz.com" target="_blank">
+            View Booking Details
+          </a>
+        </div>
+
+        <div class="signature">
+          Warm regards,<br />
+          <strong>Team Zappy</strong>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="footer">
+        © 2026 <strong>Zappy Events</strong><br />
+        <a href="https://zappyeventz.com" target="_blank">
+          www.zappyeventz.com
+        </a>
+      </div>
+
+    </div>
+  </div>
+</body>
+
+</html>

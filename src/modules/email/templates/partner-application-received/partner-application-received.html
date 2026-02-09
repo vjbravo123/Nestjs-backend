@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>New Partner Application – Zappy</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: #f5f3ff;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: #1f2937;
+        }
+
+        /* WRAPPER */
+        .wrapper {
+            max-width: 760px;
+            margin: 40px auto;
+            padding: 0 16px;
+        }
+
+        /* CARD */
+        .card {
+            background: #ffffff;
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 28px 80px rgba(0, 0, 0, 0.16);
+        }
+
+        /* HEADER */
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #7331e650, #e33d9050);
+            padding: 20px 36px;
+            border-bottom: 1px solid #ede9fe;
+        }
+
+        .status {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: #ffffff;
+            padding: 8px 18px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo {
+            height: 52px;
+            display: block;
+        }
+
+        .header-title {
+            text-align: center;
+            font-size: 14.5px;
+            color: #6b7280;
+        }
+
+        .header-title strong {
+            color: #7c3aed;
+        }
+
+        /* MAIN */
+        .main {
+            padding: 20px 44px 32px;
+        }
+
+        /* TITLE */
+        .main h1 {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 0.3px;
+        }
+
+        .subtitle {
+            margin-top: 8px;
+            color: #6b7280;
+            font-size: 15px;
+        }
+
+        /* DIVIDER */
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, #7c3aed, #ec4899, #f59e0b);
+            margin: 28px 0;
+        }
+
+        /* TEXT */
+        .main p {
+            font-size: 15.5px;
+            line-height: 1.9;
+            margin: 12px 0;
+        }
+
+        /* INFO GRID */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+            margin: 32px 0;
+        }
+
+        /* INFO BOX */
+        .info-box {
+            background: #faf7ff;
+            border-radius: 18px;
+            padding: 22px;
+            border: 1px solid #eee7fb;
+        }
+
+        .info-box h4 {
+            margin: 0 0 10px;
+            font-size: 15px;
+            color: #7c3aed;
+        }
+
+        .info-box p {
+            margin: 6px 0;
+            font-size: 14.5px;
+        }
+
+        /* ACTION */
+        .action {
+            margin-top: 36px;
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .action a {
+            display: inline-block;
+            padding: 14px 34px;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .primary {
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+            color: #ffffff;
+        }
+
+        .secondary {
+            background: #f3e8ff;
+            color: #5b21b6;
+        }
+
+        /* FOOTER */
+        /* FOOTER */
+        .footer {
+            background: #120a2a;
+            padding: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #c4b5fd;
+        }
+
+        .footer a {
+            padding: 4px;
+            color: #f9a8d4;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .footer strong {
+            color: #f9a8d4;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <div class="card">
+            <!-- HEADER -->
+            <div class="header">
+                <img src="https://zappyevent.s3.ap-south-1.amazonaws.com/zappy_logos/zappy.png" alt="Zappy Logo"
+                    class="logo" />
+                <div class="header-title">
+                    Internal notification from <strong>Zappy</strong>
+                </div>
+
+                <div class="status">Vendor Application</div>
+            </div>
+
+            <!-- MAIN -->
+            <div class="main">
+                <h2>📥 Partner Application Received</h2>
+                <div class="subtitle">
+                    A new vendor has registered as a Partner on Zappy
+                </div>
+
+                <div class="divider"></div>
+
+                <p>
+                    A new Partner application has been submitted on the Zappy platform.
+                    Please review the details below and proceed with verification.
+                </p>
+
+                <!-- INFO GRID -->
+                <div class="info-grid">
+                    <div class="info-box">
+                        <h4>👤 Partner Details</h4>
+                        <p><strong>Business Name:</strong> {{businessName}}</p>
+                        <p><strong>Email:</strong> {{partnerEmail}}</p>
+                        <p><strong>Phone:</strong> {{partnerPhone}}</p>
+                    </div>
+
+                    <div class="info-box">
+                        <h4>🏢 Business Information</h4>
+                        <p><strong>Business Type:</strong> {{businessType}}</p>
+                        <p><strong>City:</strong> {{city}}</p>
+                        <p><strong>Registration Date:</strong> {{appliedDate}}</p>
+                    </div>
+                </div>
+
+                <p>
+                    The Partner account is currently in
+                    <strong>pending verification</strong> status. No bookings will be
+                    assigned until the verification process is completed.
+                </p>
+
+                <!-- ACTIONS -->
+                <div class="action" id="actionBox"></div>
+            </div>
+
+            <!-- FOOTER -->
+            <!-- FOOTER -->
+            <div class="footer">
+                © 2026 <strong>Zappy Events</strong><br />
+                <a href="https://zappyeventz.com" target="_blank">www.zappyeventz.com</a><br />
+                This is an automated system email for administrative use only.
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+    const id = "12345";
+
+    const actionBox = document.getElementById("actionBox");
+
+    if (id) {
+        actionBox.innerHTML += `
+      <a href="https://admin.zappyeventz.com/admin/admin/vendors/details/${id}" class="primary" target="_blank">
+        Review Application
+      </a>
+    `;
+    }
+
+    actionBox.innerHTML += `
+    <a href="https://admin.zappyeventz.com/admin/dashboard" class="secondary" target="_blank">
+      Open Admin Dashboard
+    </a>
+  `;
+</script>
+
+</html>
