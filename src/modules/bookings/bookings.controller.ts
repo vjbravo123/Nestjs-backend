@@ -63,6 +63,8 @@ export class BookingsController {
   }
 }
 
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
 @Controller('payment-rules') // Base URL: /payment-rules
 export class PaymentRulesController {
   constructor(private readonly bookingsService: BookingsService) {}
