@@ -44,6 +44,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { BookingpaymentsModule } from './modules/bookingpayments/bookingpayments.module';
 import { TalkToExpertModule } from './modules/talk-to-expert/talk-to-expert.module';
 import { CustomizePackageModule } from './modules/create-customize-package/create-customize-package.module';
+import { PaymentHistoryModule } from './modules/payment-history/payment-history.module';
 
 
 @Module({
@@ -90,10 +91,10 @@ import { CustomizePackageModule } from './modules/create-customize-package/creat
     ContactUsModule,
     WhatsAppModule,
     WorkerModule, //  Queue processors
-    BookingsModule, BookingpaymentsModule, TalkToExpertModule, CustomizePackageModule,
+    BookingsModule, BookingpaymentsModule, TalkToExpertModule, CustomizePackageModule, PaymentHistoryModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController,],
+  providers: [AppService,],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

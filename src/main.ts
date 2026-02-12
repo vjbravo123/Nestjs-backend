@@ -4,6 +4,8 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import mongoose from 'mongoose';
 
+// import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+
 // import * as Sentry from '@sentry/node';
 import logger from './common/utils/logger';
 import { WinstonLoggerService } from './common/utils/winston-logger.service';
@@ -34,6 +36,17 @@ async function bootstrap() {
     logger: customLogger,
     bufferLogs: true,
   });
+
+  // ✅ Swagger Configuration 
+  // const swaggerConfig = new DocumentBuilder()
+  //   .setTitle('Zappy API')
+  //   .setDescription('Zappy Backend API Documentation')
+  //   .setVersion('1.0')
+  //   .addBearerAuth() // for JWT support
+  //   .build();
+
+  // const document = SwaggerModule.createDocument(app, swaggerConfig);
+  // SwaggerModule.setup('api-docs', app, document);
 
   // Enable CORS with credentials and trusted domains
   app.enableCors({

@@ -6,18 +6,18 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 
 
-@UseGuards(JwtAuthGuard,RolesGuard)
+// @UseGuards(JwtAuthGuard,RolesGuard)
 @Controller('payment-config') 
 export class PaymentConfigController {
   constructor(private readonly configService: PaymentConfigService) {}
   
-  @Roles('admin','user')
+  // @Roles('admin','user')
   @Get()
   getSettings() {
     return this.configService.getConfig();
   }
   
-  @Roles("admin")
+  // @Roles("admin")
   @Post()
   saveSettings(@Body() dto: UpdatePaymentConfigDto) {
     return this.configService.updateConfig(dto);
