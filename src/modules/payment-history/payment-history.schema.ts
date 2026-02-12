@@ -32,18 +32,16 @@ export class PaymentHistory {
     userId: Types.ObjectId;
 
     @Prop({ required: true, unique: true })
-    checkoutIntentId: string; // The Booking ID
+    orderId: string; 
 
     @Prop({ required: true })
     totalEventCost: number;
 
     @Prop({ required: true })
-    paymentPlan: string; // 'full', 'partial', 'offline', 'custom'
+    paymentPlan: string; 
 
-    // MilestoneSchema Stores what is paid and what is pending
     @Prop({ type: [MilestoneSchema], default: [] })
     schedule: Milestone[];
-    //order id , 
 }
 
 export const PaymentHistorySchema = SchemaFactory.createForClass(PaymentHistory);

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PaymentHistory, PaymentHistoryDocument } from './payment-history.schema';
@@ -12,77 +12,46 @@ export class PaymentHistoryService {
         private readonly historyModel: Model<PaymentHistoryDocument>,
     ) {}
 
-    //FOR POST: Create the Schedule
     async createSchedule(userId: string, dto: CreateHistoryDto) {
-        // Idempotency: If schedule exists, return it
-        const existing = await this.historyModel.findOne({ checkoutIntentId: dto.checkoutIntentId });
+        // Idempotency check
+        const existing = await this.historyModel.findOne({ orderId: dto.orderId });
         if (existing) return existing;
 
-        
-        const milestones: any[] = [];
-        
-        const balance = dto.totalAmount - dto.amountToPayNow;
-
-        if (dto.paymentPlan === 'offline') {
-            milestones.push({
-                name: 'Full Payment (At Venue)',
-                amount: dto.totalAmount,
-                status: 'pay_at_venue',
-                paidAt: null
-            });
-        } 
-        else if (balance <= 0) {
-            // Full Payment Plan
-            milestones.push({
-                name: 'Full Payment',
-                amount: dto.totalAmount,
-                status: 'pending',
-                paidAt: null
-            });
-        } 
-        else {
-            // Partial / Custom Plan
-            // 1. Current Payment (Advance)
-            milestones.push({
-                name: 'Booking Advance',
-                amount: dto.amountToPayNow,
-                status: 'pending',
-                paidAt: null
-            });
-
-            // 2. Future Pending Payment (Balance)
-            milestones.push({
-                name: 'Remaining Balance',
-                amount: balance,
-                status: 'pending',
-                paidAt: null
-            });
-        }
+         
+        const validatedSchedule = dto.schedule.map(milestone => {
+            // Mandatory Transaction ID
+            if (milestone.status === 'paid') {
+                if (!milestone.transactionId) {
+                    throw new BadRequestException(
+                        `Milestone '${milestone.name}' is marked as PAID but missing a transactionId.`
+                    );
+                }
+                
+                return { ...milestone, paidAt: new Date() };
+            }
+            return milestone;
+        });
 
         return this.historyModel.create({
             userId: new Types.ObjectId(userId),
-            checkoutIntentId: dto.checkoutIntentId,
+            orderId: dto.orderId,
             totalEventCost: dto.totalAmount,
             paymentPlan: dto.paymentPlan,
-            schedule: milestones
+            schedule: validatedSchedule 
         });
     }
 
-    // 🟡 PATCH: Update a specific Milestone to PAID
     async updateMilestoneStatus(dto: UpdateHistoryStatusDto) {
-        console.log({ checkoutIntentId: dto.checkoutIntentId });
-        
-        const history = await this.historyModel.findOne({ checkoutIntentId: dto.checkoutIntentId });
+        const history = await this.historyModel.findOne({ orderId: dto.orderId });
         
         if (!history) {
-            throw new NotFoundException('Payment history not found for this booking');
+            throw new NotFoundException('Payment history not found');
         }
 
-        // Find the specific milestone
         const milestone = history.schedule.find(m => m.name === dto.milestoneName);
         
         if (!milestone) {
-            throw new NotFoundException(`Milestone '${dto.milestoneName}' not found in schedule`);
+            throw new NotFoundException(`Milestone '${dto.milestoneName}' not found`);
         }
 
         milestone.status = dto.status;
@@ -95,21 +64,18 @@ export class PaymentHistoryService {
             milestone.transactionId = dto.transactionId;
         }
 
-        
+        // Mongoose nested array updates
         history.markModified('schedule');
         
         return history.save();
     }
 
-    // GET: Fetch History by Booking ID
-    async getHistory(checkoutIntentId: string) {
-        const history = await this.historyModel.findOne({ checkoutIntentId });
-        console.log(history);        
+    async getHistoryByOrder(orderId: string) {
+        const history = await this.historyModel.findOne({ orderId });
         if (!history) throw new NotFoundException('History not found');
         return history;
     }
 
-    // 📜 GET: Fetch All History for a User
     async getUserHistory(userId: string) {
         return this.historyModel
             .find({ userId: new Types.ObjectId(userId) })

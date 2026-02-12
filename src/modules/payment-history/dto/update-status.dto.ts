@@ -3,7 +3,7 @@ import { IsString, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
 export class UpdateHistoryStatusDto {
     @IsString()
     @IsNotEmpty()
-    checkoutIntentId: string;
+    orderId: string;
 
     @IsString()
     @IsNotEmpty()
