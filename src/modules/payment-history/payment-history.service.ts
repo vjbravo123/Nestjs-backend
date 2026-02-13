@@ -49,6 +49,7 @@ export class PaymentHistoryService {
         });
     }
 
+    
     private generateMilestones(
         totalAmount: number,
         initialPaid: number,
