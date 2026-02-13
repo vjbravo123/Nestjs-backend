@@ -1,32 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, IsEnum, IsArray, ValidateNested, IsOptional } from 'class-validator';
-import { Type } from 'class-transformer';
-
-class MilestoneDto {
-    @IsString()
-    @IsNotEmpty()
-    @IsEnum([
-        'Booking Token', 
-        'First Installment', 
-        'Second Installment', 
-        'Final Balance', 
-        'Full Payment', 
-        'Security Deposit', 
-        'Pay at Venue'
-    ])
-    name: string;
-
-    @IsNumber()
-    @IsNotEmpty()
-    amount: number;
-
-    @IsEnum(['pending', 'paid', 'failed', 'pay_at_venue'])
-    @IsNotEmpty()
-    status: string;
-
-    @IsString()
-    @IsOptional()   
-    transactionId?: string;
-}
+import { IsString, IsNotEmpty, IsNumber, IsEnum, IsOptional, IsDateString } from 'class-validator';
 
 export class CreateHistoryDto {
     @IsString()
@@ -35,14 +7,21 @@ export class CreateHistoryDto {
 
     @IsNumber()
     @IsNotEmpty()
-    totalAmount: number;
+    totalAmount: number; 
 
-    @IsEnum(['full', 'partial', 'custom', 'offline'])
+    @IsDateString()
     @IsNotEmpty()
-    paymentPlan: string;
+    eventDate: string; 
 
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => MilestoneDto)
-    schedule: MilestoneDto[];
+    @IsNumber()
+    @IsNotEmpty()
+    initialPaidAmount: number;
+
+    @IsString()
+    @IsNotEmpty()
+    paymentMethod: string; 
+
+    @IsString()
+    @IsNotEmpty()
+    transactionId: string; 
 }

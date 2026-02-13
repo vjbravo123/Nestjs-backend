@@ -25,14 +25,10 @@ export class PaymentHistoryController {
     @UseGuards(JwtAuthGuard , RolesGuard)
     @Roles('admin' ,'user')
     async createHistory(@CurrentUser() user: any, @Body() dto: CreateHistoryDto){
-        const userId = user?.userId;
-        
-        if (!userId) {
-            throw new BadRequestException('User ID missing from token');
-        }
-
-        return this.historyService.createSchedule(userId, dto);
-    }
+    const userId = user?.userId;
+    if (!userId) throw new BadRequestException('User ID missing');
+    return this.historyService.createSchedule(userId, dto);
+}
 
     @Patch('status')
     @UseGuards(JwtAuthGuard , RolesGuard)

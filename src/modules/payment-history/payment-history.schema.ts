@@ -11,8 +11,14 @@ class Milestone {
     @Prop({ required: true })
     amount: number;
 
+    @Prop({ required: true }) 
+    dueDate: Date;
+
+    @Prop({ required: true }) 
+    targetPercentage: number; 
+
     @Prop({ 
-        enum: ['pending', 'paid', 'failed', 'pay_at_venue'], 
+        enum: ['pending', 'paid', 'failed', 'pay_at_venue', 'skipped'], 
         default: 'pending' 
     })
     status: string;
@@ -36,9 +42,6 @@ export class PaymentHistory {
 
     @Prop({ required: true })
     totalEventCost: number;
-
-    @Prop({ required: true })
-    paymentPlan: string; 
 
     @Prop({ type: [MilestoneSchema], default: [] })
     schedule: Milestone[];
