@@ -40,11 +40,11 @@ import { PaymentsModule } from './modules/payments/payments.module'
 import { EventsModule } from './events/events.module'
 import { BullMqModule } from './providers/queue/bullmq.module';
 import { WorkerModule } from './workers/worker.module';
-import { BookingsModule } from './modules/bookings/bookings.module';
 import { BookingpaymentsModule } from './modules/bookingpayments/bookingpayments.module';
 import { TalkToExpertModule } from './modules/talk-to-expert/talk-to-expert.module';
 import { CustomizePackageModule } from './modules/create-customize-package/create-customize-package.module';
 import { PaymentHistoryModule } from './modules/payment-history/payment-history.module';
+import { PaymentRulesModule } from './modules/payment-rules/payment-rules.module';
 
 
 @Module({
@@ -91,7 +91,7 @@ import { PaymentHistoryModule } from './modules/payment-history/payment-history.
     ContactUsModule,
     WhatsAppModule,
     WorkerModule, //  Queue processors
-    BookingsModule, BookingpaymentsModule, TalkToExpertModule, CustomizePackageModule, PaymentHistoryModule,
+     BookingpaymentsModule, TalkToExpertModule, CustomizePackageModule, PaymentHistoryModule, PaymentRulesModule,
   ],
   controllers: [AppController,],
   providers: [AppService,],

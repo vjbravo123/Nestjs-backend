@@ -1,15 +1,16 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PaymentHistory, PaymentHistorySchema } from './payment-history.schema';
-import { PaymentHistoryService } from './payment-history.service';
 import { PaymentHistoryController } from './payment-history.controller';
+import { PaymentHistoryService } from './payment-history.service';
+import { PaymentHistory, PaymentHistorySchema } from './payment-history.schema';
+import { PaymentRulesModule } from '../payment-rules/payment-rules.module'; 
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: PaymentHistory.name, schema: PaymentHistorySchema }]),
-    ],
-    controllers: [PaymentHistoryController],
-    providers: [PaymentHistoryService],
-    exports: [PaymentHistoryService],
+  imports: [
+    MongooseModule.forFeature([{ name: PaymentHistory.name, schema: PaymentHistorySchema }]),
+    PaymentRulesModule 
+  ],
+  controllers: [PaymentHistoryController],
+  providers: [PaymentHistoryService],
 })
 export class PaymentHistoryModule {}
