@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, NotFoundException } from '@nestjs/common';
 import { CustomizePackageService } from './create-customize-package.service';
 import { CreateCustomizePackageDto } from './dto/create-customize-package.dto';
 
@@ -14,5 +14,14 @@ export class CustomizePackageController {
   @Get()
   async findAll() {
     return this.customizePackageService.findAll();
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const pkg = await this.customizePackageService.findOne(id);
+    if (!pkg) {
+      throw new NotFoundException('Custom package request not found');
+    }
+    return pkg;
   }
 }

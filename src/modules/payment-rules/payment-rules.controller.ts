@@ -6,7 +6,7 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 
 
-@Controller('payment-rules')
+@Controller('milestone-rules')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin') 
 export class PaymentRulesController {

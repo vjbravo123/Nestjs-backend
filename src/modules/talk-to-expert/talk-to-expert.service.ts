@@ -16,6 +16,15 @@ export class TalkToExpertService {
   }
 
   async findAll(): Promise<TalkToExpert[]> {
-    return this.talkToExpertModel.find().exec();
+    return this.talkToExpertModel
+      .find()
+      .select('name phone contactMethod preferredTime createdAt')
+      .sort({ createdAt: -1 }) 
+      .exec();
+  }
+
+ 
+  async findOne(id: string): Promise<TalkToExpert | null> {
+    return this.talkToExpertModel.findById(id).exec();
   }
 }

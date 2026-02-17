@@ -16,6 +16,10 @@ export class CustomizePackageService {
   }
 
   async findAll(): Promise<CustomizePackage[]> {
-    return this.customizePackageModel.find().exec();
+    return this.customizePackageModel.find().sort({ createdAt: -1 }).exec();
+  }
+
+  async findOne(id: string): Promise<CustomizePackage | null> {
+    return this.customizePackageModel.findById(id).exec();
   }
 }

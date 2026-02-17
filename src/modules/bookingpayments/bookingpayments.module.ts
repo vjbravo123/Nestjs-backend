@@ -10,6 +10,6 @@ import { PaymentConfig, PaymentConfigSchema } from './schemas/payment-config.sch
   ],
   controllers: [PaymentConfigController],
   providers: [PaymentConfigService],
-  exports: [PaymentConfigService], // Export so BookingService can use it for validations
+  exports: [PaymentConfigService], 
 })
 export class BookingpaymentsModule {}

@@ -45,6 +45,7 @@ import { TalkToExpertModule } from './modules/talk-to-expert/talk-to-expert.modu
 import { CustomizePackageModule } from './modules/create-customize-package/create-customize-package.module';
 import { PaymentHistoryModule } from './modules/payment-history/payment-history.module';
 import { PaymentRulesModule } from './modules/payment-rules/payment-rules.module';
+import { BookingsController } from './modules/bookings/bookings.controller';
 
 
 @Module({
