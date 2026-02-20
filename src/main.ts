@@ -51,6 +51,7 @@ async function bootstrap() {
   // Enable CORS with credentials and trusted domains
   app.enableCors({
     origin: [
+      'http://43.204.30.241:3000',
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:3002',
