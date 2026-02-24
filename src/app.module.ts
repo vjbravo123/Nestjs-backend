@@ -45,8 +45,8 @@ import { TalkToExpertModule } from './modules/talk-to-expert/talk-to-expert.modu
 import { CustomizePackageModule } from './modules/create-customize-package/create-customize-package.module';
 import { PaymentHistoryModule } from './modules/payment-history/payment-history.module';
 import { PaymentRulesModule } from './modules/payment-rules/payment-rules.module';
-import { BookingsController } from './modules/bookings/bookings.controller';
 import { PricingModule } from './modules/pricing/pricing.module';
+import { CommissionModule } from './modules/commission/commission.module';
 
 
 
@@ -94,9 +94,9 @@ import { PricingModule } from './modules/pricing/pricing.module';
     ContactUsModule,
     WhatsAppModule,
     WorkerModule, //  Queue processors
-     BookingpaymentsModule, TalkToExpertModule, CustomizePackageModule, PaymentHistoryModule, PaymentRulesModule, PricingModule,
+     BookingpaymentsModule, TalkToExpertModule, CustomizePackageModule, PaymentHistoryModule, PaymentRulesModule, PricingModule, CommissionModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController ],
   providers: [AppService],
 })
 export class AppModule implements NestModule {
