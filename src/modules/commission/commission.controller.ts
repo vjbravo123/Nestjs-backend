@@ -45,6 +45,8 @@ export class CommissionController {
 
   // Route matches:
   // PATCH /commission/event/123/config
+  // PATCH /commission/service/123/config
+  //finalprice function : 
   @Patch(':type/:id/config')
   async updateConfig(
     @Param('type') type: string,
@@ -59,6 +61,6 @@ export class CommissionController {
       throw new BadRequestException('Request body cannot be empty for updates.');
     }
 
-    return this.commissionService.updateConfig(type, id, updateCommissionDto);
+    return this.commissionService.updateCommissionConfig(type, id, updateCommissionDto);
   }
 }

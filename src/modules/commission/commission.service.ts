@@ -11,10 +11,12 @@ export class CommissionService {
         @InjectModel(Commission.name) private commissionModel: Model<CommissionDocument>
     ) { }
 
-    async createCommission(type: string, id: Types.ObjectId, dto: UpdateCommissionDto): Promise<CommissionDocument> {
+    async createCommission(type: string, id: Types.ObjectId | string, dto: UpdateCommissionDto): Promise<CommissionDocument> {
+        const objectId = new Types.ObjectId(id);
+        
         const query = type === 'event' 
-            ? { eventId: id } 
-            : { serviceId: id };
+            ? { eventId: objectId } 
+            : { serviceId: objectId };
 
         const existingCommission = await this.commissionModel.findOne(query).exec();
         if (existingCommission) {
@@ -29,10 +31,12 @@ export class CommissionService {
         return commission;
     }
 
-    async getCommission(type: string, id: Types.ObjectId): Promise<CommissionDocument> {
+    async getCommission(type: string, id: Types.ObjectId | string): Promise<CommissionDocument> {
+        const objectId = new Types.ObjectId(id);
+        
         const query = type === 'event'
-            ? { eventId: id }
-            : { serviceId: id };
+            ? { eventId: objectId }
+            : { serviceId: objectId };
 
         const commission = await this.commissionModel.findOne(query).exec();
 
@@ -43,7 +47,7 @@ export class CommissionService {
         return commission;
     }
 
-    async updateConfig(type: string, id: Types.ObjectId, updateCommissionDto: UpdateCommissionDto): Promise<CommissionDocument> {
+    async updateCommissionConfig(type: string, id: Types.ObjectId | string, updateCommissionDto: UpdateCommissionDto): Promise<CommissionDocument> {
         const commission = await this.getCommission(type, id);
         
         // 1. Flatten the incoming DTO into dot-notation paths using the external utility

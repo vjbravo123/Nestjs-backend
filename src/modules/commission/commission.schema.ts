@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-
+import * as mongoose from 'mongoose';
 @Schema({ _id: false })
 export class FeeConfig {
   @Prop({ required: true, enum: ['percentage', 'flat'] }) type: string;
@@ -43,13 +43,33 @@ export class GstToggles {
 
 export type CommissionDocument = Commission & Document;
 
-@Schema({ timestamps: true })
+@Schema({ 
+  timestamps: true,
+  toJSON: {
+    transform: (doc, ret: any) => {
+      delete ret._id;
+      delete ret.__v;
+      delete ret.createdAt;
+      delete ret.updatedAt;
+      return ret;
+    }
+  },
+  toObject: {
+    transform: (doc, ret: any) => {
+      delete ret._id;
+      delete ret.__v;
+      delete ret.createdAt;
+      delete ret.updatedAt;
+      return ret;
+    }
+  }
+})
 export class Commission {
-  @Prop({ type: Types.ObjectId, ref: 'Event', sparse: true })
-  eventId?: Types.ObjectId;
+@Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Event', sparse: true })
+eventId?: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Service', sparse: true })
-  serviceId?: Types.ObjectId;
+@Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Service', sparse: true })
+serviceId?: Types.ObjectId;
 
   @Prop({ required: true }) 
   basePrice: number;
