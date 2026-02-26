@@ -1,4 +1,4 @@
-import {Body, Controller, Get, Post, Patch ,Param, UseGuards, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Post, Patch, Param, UseGuards, BadRequestException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { CommissionService } from './commission.service';
 import { UpdateCommissionDto } from './dto/update-commission.dto';
@@ -14,9 +14,6 @@ import { CreateCommissionDto } from './dto/create-commission.dto';
 export class CommissionController {
   constructor(private readonly commissionService: CommissionService) {}
 
-  // Route matches: 
-  // POST /commission/event/123 OR
-  // POST /commission/service/456
   @Post(':type/:id')
   async createCommission(
     @Param('type') type: string,
@@ -29,9 +26,6 @@ export class CommissionController {
     return this.commissionService.createCommission(type, id, createCommissionDto);
   }
 
-   // Route matches:
-   // GET /commission/event/123 or
-   // GET /commission/service/456
   @Get(':type/:id')
   async getCommission(
     @Param('type') type: string,
@@ -43,10 +37,6 @@ export class CommissionController {
     return this.commissionService.getCommission(type, id);
   }
 
-  // Route matches:
-  // PATCH /commission/event/123/config
-  // PATCH /commission/service/123/config
-  //finalprice function : 
   @Patch(':type/:id/config')
   async updateConfig(
     @Param('type') type: string,

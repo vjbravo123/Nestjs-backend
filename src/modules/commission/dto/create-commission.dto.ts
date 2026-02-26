@@ -6,28 +6,21 @@ export class StrictFeeConfigDto {
   @IsNotEmpty() @IsString() type: string;
   @IsNotEmpty() @IsNumber() userCharge: number;
   @IsNotEmpty() @IsNumber() vendorCharge: number;
-  @IsNotEmpty() @IsBoolean() includeGST: boolean;
-  @IsOptional() @IsNumber() userAmount?: number;
-  @IsOptional() @IsNumber() vendorAmount?: number;
+}
+
+export class StrictGatewayFeeConfigDto extends StrictFeeConfigDto {
+  @IsOptional() @IsBoolean() includeGST?: boolean;
 }
 
 export class StrictGstConfigDto {
   @IsNotEmpty() @IsNumber() userCharge: number;
   @IsNotEmpty() @IsNumber() vendorCharge: number;
-  @IsOptional() @IsNumber() userAmount?: number;
-  @IsOptional() @IsNumber() vendorAmount?: number;
 }
 
-export class StrictGstTogglesDto {
-  @IsNotEmpty() @IsBoolean() applyGstOnPlatformFee: boolean;
-  @IsNotEmpty() @IsBoolean() applyGstOnGatewayFee: boolean;
-  @IsNotEmpty() @IsBoolean() applyGstOnZappyCommission: boolean;
-  @IsNotEmpty() @IsBoolean() applyGstOnAdditionalCharges: boolean;
-}
-
-export class CreateCommissionDto {
+export class StrictTierConfigDto {
+  @IsNotEmpty() @IsString() tierId: string;
+  @IsNotEmpty() @IsString() tierName: string;
   @IsNotEmpty() @IsNumber() basePrice: number;
-  @IsNotEmpty() @IsBoolean() includeGST: boolean;
 
   @IsDefined() @ValidateNested() @Type(() => StrictFeeConfigDto)
   platformFee: StrictFeeConfigDto;
@@ -35,14 +28,11 @@ export class CreateCommissionDto {
   @IsDefined() @ValidateNested() @Type(() => StrictGstConfigDto)
   gst: StrictGstConfigDto;
 
-  @IsDefined() @ValidateNested() @Type(() => StrictFeeConfigDto)
-  gatewayFee: StrictFeeConfigDto;
+  @IsDefined() @ValidateNested() @Type(() => StrictGatewayFeeConfigDto)
+  gatewayFee: StrictGatewayFeeConfigDto;
 
   @IsDefined() @ValidateNested() @Type(() => StrictFeeConfigDto)
   zappyCommission: StrictFeeConfigDto;
-
-  @IsDefined() @ValidateNested() @Type(() => StrictGstTogglesDto)
-  gstToggles: StrictGstTogglesDto;
 
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => AdditionalChargeDto)
   additionalCharges?: AdditionalChargeDto[];
@@ -51,4 +41,12 @@ export class CreateCommissionDto {
 
   @IsOptional() @ValidateNested() @Type(() => PricingSummaryDto)
   pricing?: PricingSummaryDto;
+}
+
+export class CreateCommissionDto {
+  @IsOptional() @IsString() eventId?: string;
+  @IsOptional() @IsString() serviceId?: string;
+
+  @IsNotEmpty() @IsArray() @ValidateNested({ each: true }) @Type(() => StrictTierConfigDto)
+  tiers: StrictTierConfigDto[];
 }

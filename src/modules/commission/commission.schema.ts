@@ -1,22 +1,26 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import * as mongoose from 'mongoose';
+
 @Schema({ _id: false })
 export class FeeConfig {
   @Prop({ required: true, enum: ['percentage', 'flat'] }) type: string;
   @Prop({ required: true }) userCharge: number;
   @Prop({ required: true }) vendorCharge: number;
-  @Prop({ default: 0 }) userAmount: number;
-  @Prop({ default: 0 }) vendorAmount: number;
-  @Prop({ required: true }) includeGST: boolean; 
+}
+
+@Schema({ _id: false })
+export class GatewayFeeConfig {
+  @Prop({ required: true, enum: ['percentage', 'flat'] }) type: string;
+  @Prop({ required: true }) userCharge: number;
+  @Prop({ required: true }) vendorCharge: number;
+  @Prop({ required: true, default: false }) includeGST: boolean; 
 }
 
 @Schema({ _id: false })
 export class GstConfig {
   @Prop({ required: true }) userCharge: number;
   @Prop({ required: true }) vendorCharge: number;
-  @Prop({ default: 0 }) userAmount: number;
-  @Prop({ default: 0 }) vendorAmount: number;
 }
 
 @Schema({ _id: false })
@@ -34,11 +38,21 @@ export class PricingSummary {
 }
 
 @Schema({ _id: false })
-export class GstToggles {
-  @Prop({ required: true }) applyGstOnPlatformFee: boolean;
-  @Prop({ required: true }) applyGstOnGatewayFee: boolean;
-  @Prop({ required: true }) applyGstOnZappyCommission: boolean;
-  @Prop({ required: true }) applyGstOnAdditionalCharges: boolean;
+export class TierConfig {
+  @Prop({ required: true }) tierId: string;
+  @Prop({ required: true, default: 'Unknown Tier' }) tierName: string;
+  @Prop({ required: true }) basePrice: number;
+  
+  @Prop({ type: FeeConfig, required: true }) platformFee: FeeConfig;
+  @Prop({ type: GstConfig, required: true }) gst: GstConfig;
+  
+  @Prop({ type: GatewayFeeConfig, required: true }) gatewayFee: GatewayFeeConfig;
+  
+  @Prop({ type: FeeConfig, required: true }) zappyCommission: FeeConfig;
+  
+  @Prop({ type: [AdditionalCharge], default:[] }) additionalCharges: AdditionalCharge[];
+  @Prop({ default: 0 }) totalAdditionalCharges: number;
+  @Prop({ type: PricingSummary, default: () => ({}) }) pricing: PricingSummary;
 }
 
 export type CommissionDocument = Commission & Document;
@@ -65,41 +79,14 @@ export type CommissionDocument = Commission & Document;
   }
 })
 export class Commission {
-@Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Event', sparse: true })
-eventId?: Types.ObjectId;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Event', sparse: true })
+  eventId?: Types.ObjectId;
 
-@Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Service', sparse: true })
-serviceId?: Types.ObjectId;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Service', sparse: true })
+  serviceId?: Types.ObjectId;
 
-  @Prop({ required: true }) 
-  basePrice: number;
-
-  @Prop({ type: FeeConfig, required: true }) 
-  platformFee: FeeConfig;
-
-  @Prop({ type: GstConfig, required: true }) 
-  gst: GstConfig;
-
-  @Prop({ type: FeeConfig, required: true }) 
-  gatewayFee: FeeConfig;
-
-  @Prop({ type: FeeConfig, required: true }) 
-  zappyCommission: FeeConfig;
-
-  @Prop({ type: [AdditionalCharge], default: [] })
-  additionalCharges: AdditionalCharge[];
-
-  @Prop({ default: 0 })
-  totalAdditionalCharges: number;
-
-  @Prop({ required: true }) 
-  includeGST: boolean;
-
-  @Prop({ type: PricingSummary, default: () => ({}) })
-  pricing: PricingSummary;
-
-  @Prop({ type: GstToggles, required: true }) 
-  gstToggles: GstToggles;
+  @Prop({ type: [TierConfig], default:[] })
+  tiers: TierConfig[];
 }
 
 export const CommissionSchema = SchemaFactory.createForClass(Commission);
