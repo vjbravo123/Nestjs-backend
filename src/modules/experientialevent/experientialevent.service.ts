@@ -156,6 +156,9 @@ export class ExperientialEventService {
     if (filter.ageGroup) match.ageGroup = filter.ageGroup;
     if (filter.title) match.title = filter.title;
     if (filter.totalBookings) match.totalBookings = filter.totalBookings;
+    if (filter.createdBy) {
+      match.createdBy = new Types.ObjectId(filter.createdBy);
+    }
     if (filter.isShowcaseEvent == 'true') match.isShowcaseEvent = true;
     // Price range filter
     if (filter.priceRange) {
