@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to Zappy</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 12px;
+      background: #f8f4ff;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+
+    .wrapper {
+      max-width: 720px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
+    }
+
+    /* HERO */
+    .hero {
+      background:
+        linear-gradient(135deg, rgba(124, 58, 237, 0.90), rgba(236, 72, 153, 0.90)),
+        url('https://images.unsplash.com/photo-1527529482837-4698179dc6ce');
+      background-size: cover;
+      background-position: center;
+      padding: 28px 20px;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .hero img {
+      height: 80px;
+      margin-bottom: 12px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 34px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero p {
+      margin-top: 12px;
+      font-size: 17px;
+      opacity: 0.95;
+    }
+
+    /* CONTENT */
+    .content {
+      padding: 45px;
+      color: #1f2937;
+    }
+
+    .content p {
+      font-size: 15.5px;
+      line-height: 1.9;
+      margin: 12px 0;
+    }
+
+    /* WELCOME CARD */
+    .welcome-card {
+      background: linear-gradient(135deg, #faf5ff, #fdf2f8);
+      border-radius: 18px;
+      padding: 30px;
+      margin: 35px 0;
+    }
+
+    .welcome-card h3 {
+      margin-top: 0;
+      color: #7c3aed;
+      font-size: 20px;
+    }
+
+    .welcome-points {
+      margin-top: 18px;
+    }
+
+    .welcome-point {
+      margin: 12px 0;
+      font-size: 15px;
+    }
+
+    /* CTA */
+    .cta-section {
+      text-align: center;
+      margin: 50px 0 20px;
+    }
+
+    .cta-btn {
+      display: inline-block;
+      padding: 16px 44px;
+      background: linear-gradient(135deg, #7c3aed, #ec4899);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 60px;
+      box-shadow: 0 6px 12px rgba(124, 58, 237, 0.35);
+    }
+
+    /* INFO */
+    .info {
+      margin-top: 40px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 28px;
+      font-size: 14px;
+      color: #4b5563;
+    }
+
+    /* FOOTER */
+    .footer {
+      background: #1f0f3d;
+      color: #e5e7eb;
+      padding: 30px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .footer strong {
+      color: #f9a8d4;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="wrapper">
+
+    <!-- HERO -->
+    <div class="hero">
+      <img src="http://zappyevent.s3.ap-south-1.amazonaws.com/zappy_logos/zappy.png" alt="Zappy Logo">
+      <h1>Welcome to Zappy 🎉</h1>
+      <p>We’re glad to have you with us</p>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <p>Hello <strong>{{userName}}</strong>,</p>
+
+      <p>
+        Welcome to <strong>Zappy</strong>!
+        Your account has been successfully created, and you’re now part of a platform
+        designed to help you plan and manage events with ease.
+      </p>
+
+      <p>
+        This email is to confirm that your registration on Zappy is complete.
+        From here, you can browse events, make bookings, manage payments,
+        and stay updated — all from one place.
+      </p>
+
+      <!-- WELCOME CARD -->
+      <div class="welcome-card">
+        <h3>🎊 Getting started with Zappy</h3>
+
+        <div class="welcome-points">
+          <div class="welcome-point">📅 Browse and select events that match your needs</div>
+          <div class="welcome-point">🤝 Connect with verified event Partners</div>
+          <div class="welcome-point">💳 Book securely with transparent pricing</div>
+          <div class="welcome-point">🔔 Receive updates, reminders & confirmations by email</div>
+        </div>
+      </div>
+
+      <p>
+        If you ever need help, our support team is always available to assist you.
+        We’re here to ensure your experience with Zappy is smooth from start to finish.
+      </p>
+
+      <!-- CTA -->
+      <div class="cta-section">
+        <a href="https://www.zappyeventz.com" class="cta-btn" target="_blank">
+          Explore Zappy Now !
+        </a>
+      </div>
+
+      <!-- INFO -->
+      <div class="info">
+        📩 You’re receiving this email because you signed up on <strong>Zappy</strong>.
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      © 2026 <strong> <a href="https://www.zappyeventz.com" target="_blank">Zappy Events</a></strong><br>
+      Making celebrations simple, smooth & memorable 💜
+    </div>
+
+  </div>
+
+</body>
+
+</html>

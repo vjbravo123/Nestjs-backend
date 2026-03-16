@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Payment Successful – Zappy</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f5f3ff;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #1f2937;
+    }
+
+    /* WRAPPER */
+    .wrapper {
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    /* CARD */
+    .card {
+      background: #ffffff;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.18);
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, #7331e650, #e33d9050);
+      padding: 20px 36px;
+      border-bottom: 1px solid #ede9fe;
+    }
+
+    .status {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo {
+      height: 52px;
+      display: block;
+    }
+
+    .header-text {
+      text-align: center;
+      font-size: 14.5px;
+      color: #6b7280;
+    }
+
+    .header-text strong {
+      color: #7c3aed;
+    }
+
+    /* MAIN */
+    .main {
+      padding: 44px 28px 36px;
+    }
+
+    .main h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    /* DIVIDER */
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, #7c3aed, #ec4899, #f59e0b);
+      margin: 30px 0;
+    }
+
+    /* TEXT */
+    .main p {
+      font-size: 15.8px;
+      line-height: 1.95;
+      margin: 18px 0;
+    }
+
+    /* PAYMENT BOX */
+    .payment-box {
+      background: linear-gradient(135deg, #faf5ff, #fdf2f8);
+      border-radius: 18px;
+      padding: 26px;
+      margin: 30px 0;
+      border: 1px solid #f3e8ff;
+    }
+
+    .payment-box h3 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #7c3aed;
+    }
+
+    .detail {
+      margin: 10px 0;
+      font-size: 15px;
+    }
+
+    /* SUCCESS NOTE */
+    .success-note {
+      background: #ecfeff;
+      border-radius: 16px;
+      padding: 24px;
+      margin: 28px 0;
+      border: 1px solid #cffafe;
+    }
+
+    .success-note strong {
+      color: #0f766e;
+    }
+
+    /* CTA */
+    .cta {
+      margin: 42px 0 24px;
+      text-align: center;
+    }
+
+    .cta a {
+      display: inline-block;
+      padding: 16px 52px;
+      background: linear-gradient(135deg, #7c3aed, #ec4899);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 999px;
+      box-shadow: 0 6px 12px rgba(133, 75, 234, 0.35);
+    }
+
+    /* SUPPORT */
+    .support {
+      background: #fdf2f8;
+      border-radius: 16px;
+      padding: 24px;
+      margin: 30px 0;
+      border: 1px solid #fbcfe8;
+      font-size: 15px;
+    }
+
+    .support strong {
+      color: #7c3aed;
+    }
+
+    /* SIGNATURE */
+    .signature {
+      margin-top: 36px;
+      font-size: 15px;
+      color: #374151;
+    }
+
+    /* FOOTER */
+    /* FOOTER */
+    .footer {
+      background: #120a2a;
+      padding: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #c4b5fd;
+    }
+
+    .footer a {
+      padding: 4px;
+      color: #f9a8d4;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .footer strong {
+      color: #f9a8d4;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <div class="card">
+      <!-- HEADER -->
+      <div class="header">
+        <img src="https://zappyevent.s3.ap-south-1.amazonaws.com/zappy_logos/zappy.png" alt="Zappy Logo" class="logo" />
+        <div class="header-text">
+          Official payment confirmation from <strong>Zappy</strong>
+        </div>
+        <div class="status">Payment Successful</div>
+      </div>
+
+      <!-- MAIN -->
+      <div class="main">
+        <h1>Payment Successful 💳</h1>
+        <div class="subtitle">
+          Your payment has been processed successfully
+        </div>
+
+        <div class="divider"></div>
+
+        <p>Hello <strong>{{userName}}</strong>,</p>
+
+        <p>
+          Thank you for your payment on <strong>Zappy</strong>. We’re pleased
+          to confirm that your payment has been successfully completed. Your
+          booking is now fully confirmed.
+        </p>
+
+        <!-- PAYMENT DETAILS -->
+        <div class="payment-box">
+          <h3>📄 Payment Details</h3>
+
+          <div class="detail">
+            <strong>Transaction ID:</strong> {{transactionId}}
+          </div>
+          <div class="detail"><strong>Booking ID:</strong> {{bookingId}}</div>
+          <div class="detail">
+            <strong>Payment Date:</strong> {{paymentDate}}
+          </div>
+          <div class="detail">
+            <strong>Payment Method:</strong> {{paymentMethod}}
+          </div>
+          <div class="detail"><strong>Amount Paid:</strong> ₹{{amount}}</div>
+          <div class="detail">
+            <strong>Payment Status:</strong> Successful
+          </div>
+        </div>
+
+        <!-- SUCCESS NOTE -->
+        <div class="success-note">
+          <strong>✅ What happens next?</strong><br /><br />
+          Your booking is now confirmed. You will receive event updates and
+          reminders as the event date approaches.
+        </div>
+
+        <p>
+          You can view your booking and payment details anytime from your
+          Zappy account.
+        </p>
+
+        <!-- CTA -->
+        <div class="cta">
+          <a href="https://zappyeventz.com" target="_blank">
+            View Booking & Payment
+          </a>
+        </div>
+
+        <!-- SUPPORT -->
+        <div class="support">
+          <strong>💬 Need help?</strong><br /><br />
+
+          📧 <strong>Email:</strong>
+          <a href="mailto:support@zappyeventz.com" style="color: #7c3aed; text-decoration: none">
+            support@zappyeventz.com
+          </a>
+
+          <br /><br />
+
+          📞 <strong>Phone:</strong> +91 9514338368
+
+          <br /><br />
+
+          💬 <strong>WhatsApp:</strong>
+          <a href="https://wa.me/919514338368" target="_blank"
+            style="color: #16a34a; font-weight: 600; text-decoration: none">
+            Chat with us on WhatsApp
+          </a>
+        </div>
+
+        <div class="signature">
+          Thank you,<br />
+          <strong>Team Zappy</strong><br />
+          Payments & Customer Support
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <!-- FOOTER -->
+      <div class="footer">
+        © 2026 <strong>Zappy Events</strong><br />
+        <a href="https://zappyeventz.com" target="_blank">www.zappyeventz.com</a><br />
+        This email confirms a successful payment on Zappy.
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

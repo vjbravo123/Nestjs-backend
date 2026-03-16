@@ -1,0 +1,374 @@
+# ============================================================================
+# Render Blueprint - Multi-Project Infrastructure
+# ============================================================================
+# This blueprint defines THREE separate projects with isolated environments:
+#
+# 1. zappy-development (dev environment)
+# 2. zappy-staging (qa environment)
+# 3. zappy-production (production environment)
+#
+# Benefits of project isolation:
+# - 🔒 Separate access controls per project
+# - 💰 Cost tracking per environment
+# - 🛡️ Blast radius containment (dev mistakes won't affect prod)
+# - 🔑 Complete credential isolation
+# - 📊 Compliance support (SOC2/ISO)
+#
+# To Deploy: Deploy this single file from Render Dashboard
+# ============================================================================
+
+# ============================================================================
+# SHARED RESOURCES (Available to all projects)
+# ============================================================================
+# This free Redis instance is shared between dev and qa environments
+# Production has its own dedicated Redis instance
+
+services:
+  - type: keyvalue
+    name: zappy-redis-nonprod
+    plan: free
+    region: singapore
+    ipAllowList: []
+
+# ============================================================================
+# PROJECTS (Isolated environments for dev, qa, production)
+# ============================================================================
+
+projects:
+  #  ═══════════════════════════════════════════════════════════════════════
+  # PROJECT 1: DEVELOPMENT
+  # ═══════════════════════════════════════════════════════════════════════
+  - name: zappy-development
+    environments:
+      - name: dev
+        
+        envVarGroups:
+          - name: zappy-common-dev
+            envVars:
+              - key: AWS_REGION
+                value: ap-south-1
+              - key: AWS_ACCESS_KEY_ID
+                sync: false
+              - key: AWS_SECRET_ACCESS_KEY
+                sync: false
+              - key: MSG91_AUTH_KEY
+                sync: false
+              - key: MSG91_INTEGRATED_NUMBER
+                sync: false
+              - key: MSG91_NAMESPACE
+                sync: false
+              - key: MSG91_AUTHKEY
+                sync: false
+              - key: MSG91_EMAIL_DOMAIN
+                sync: false
+              - key: MSG91_FROM_EMAIL
+                sync: false
+              - key: JWT_SECRET
+                generateValue: true
+              - key: JWT_EXPIRES_IN
+                value: 7d
+              - key: FCM_PROJECT_ID
+                sync: false
+              - key: FCM_CLIENT_EMAIL
+                sync: false
+              - key: FCM_PRIVATE_KEY
+                sync: false
+              - key: PHONEPE_CLIENT_ID
+                sync: false
+              - key: PHONEPE_CLIENT_SECRET
+                sync: false
+              - key: PHONEPE_CLIENT_VERSION
+                value: 1
+              - key: PHONEPE_WEBHOOK_USERNAME
+                sync: false
+              - key: MAIL_HOST
+                sync: false
+              - key: MAIL_PORT
+                sync: false
+              - key: MAIL_USER
+                sync: false
+              - key: MAIL_PASS
+                sync: false
+              - key: MAIL_FROM
+                sync: false
+          
+          - name: zappy-dev
+            envVars:
+              - key: NODE_ENV
+                value: development
+              - key: MONGODB_URL
+                sync: false
+              - key: AWS_S3_BUCKET
+                value: zappy-dev-bucket
+              - key: FRONTEND_URL
+                value: https://dev.zappyeventz.com
+        
+        services:
+          - type: web
+            name: zappy-api-dev
+            env: node
+            plan: starter
+            branch: dev
+            region: singapore
+            buildCommand: npm install && npm run build:dev
+            startCommand: npm run start:dev:prod
+            healthCheckPath: /health
+            envVars:
+              - key: PORT
+                value: 3000
+              - key: NODE_ENV
+                value: development
+              - key: REDIS_URL
+                fromService:
+                  name: zappy-redis-nonprod
+                  type: keyvalue
+                  property: connectionString
+              - fromGroup: zappy-common-dev
+              - fromGroup: zappy-dev
+            autoDeploy: true
+          
+          - type: cron
+            name: zappy-backup-dev
+            env: node
+            plan: starter
+            branch: dev
+            region: singapore
+            schedule: "0 2 * * *"
+            buildCommand: npm install
+            startCommand: node scripts/backup-database.js
+            envVars:
+              - key: CHECK_ENV
+                value: development
+              - fromGroup: zappy-common-dev
+              - fromGroup: zappy-dev
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # PROJECT 2: STAGING/QA
+  # ═══════════════════════════════════════════════════════════════════════
+  - name: zappy-staging
+    environments:
+      - name: qa
+        
+        envVarGroups:
+          - name: zappy-common-qa
+            envVars:
+              - key: AWS_REGION
+                value: ap-south-1
+              - key: AWS_ACCESS_KEY_ID
+                sync: false
+              - key: AWS_SECRET_ACCESS_KEY
+                sync: false
+              - key: MSG91_AUTH_KEY
+                sync: false
+              - key: MSG91_INTEGRATED_NUMBER
+                sync: false
+              - key: MSG91_NAMESPACE
+                sync: false
+              - key: MSG91_AUTHKEY
+                sync: false
+              - key: MSG91_EMAIL_DOMAIN
+                sync: false
+              - key: MSG91_FROM_EMAIL
+                sync: false
+              - key: JWT_SECRET
+                generateValue: true
+              - key: JWT_EXPIRES_IN
+                value: 7d
+              - key: FCM_PROJECT_ID
+                sync: false
+              - key: FCM_CLIENT_EMAIL
+                sync: false
+              - key: FCM_PRIVATE_KEY
+                sync: false
+              - key: PHONEPE_CLIENT_ID
+                sync: false
+              - key: PHONEPE_CLIENT_SECRET
+                sync: false
+              - key: PHONEPE_CLIENT_VERSION
+                value: 1
+              - key: PHONEPE_WEBHOOK_USERNAME
+                sync: false
+              - key: MAIL_HOST
+                sync: false
+              - key: MAIL_PORT
+                sync: false
+              - key: MAIL_USER
+                sync: false
+              - key: MAIL_PASS
+                sync: false
+              - key: MAIL_FROM
+                sync: false
+          
+          - name: zappy-qa
+            envVars:
+              - key: NODE_ENV
+                value: qa
+              - key: MONGODB_URL
+                sync: false
+              - key: AWS_S3_BUCKET
+                value: zappy-qa-bucket
+              - key: FRONTEND_URL
+                value: https://qa.zappyeventz.com
+              - key: MSG91_SENDER_ID
+                value: ZAPPYQA
+        
+        services:
+          - type: web
+            name: zappy-api-qa
+            env: node
+            plan: starter
+            branch: qa
+            region: singapore
+            buildCommand: npm install && npm run build:qa
+            preDeployCommand: npm run migrate:up
+            startCommand: npm run start:qa:prod
+            domains:
+              - api-qa.zappyeventz.com
+            healthCheckPath: /health
+            envVars:
+              - key: PORT
+                value: 3000
+              - key: NODE_ENV
+                value: qa
+              - key: REDIS_URL
+                fromService:
+                  name: zappy-redis-nonprod
+                  type: keyvalue
+                  property: connectionString
+              - fromGroup: zappy-common-qa
+              - fromGroup: zappy-qa
+            autoDeploy: true
+          
+          - type: cron
+            name: zappy-backup-qa
+            env: node
+            plan: starter
+            branch: qa
+            region: singapore
+            schedule: "0 3 * * *"
+            buildCommand: npm install
+            startCommand: node scripts/backup-database.js
+            envVars:
+              - key: CHECK_ENV
+                value: qa
+              - fromGroup: zappy-common-qa
+              - fromGroup: zappy-qa
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # PROJECT 3: PRODUCTION
+  # ═══════════════════════════════════════════════════════════════════════
+  - name: zappy-production
+    environments:
+      - name: production
+        
+        permissions:
+          protection: enabled  # Only admins can modify
+        
+        envVarGroups:
+          - name: zappy-common-prod
+            envVars:
+              - key: AWS_REGION
+                value: ap-south-1
+              - key: AWS_ACCESS_KEY_ID
+                sync: false
+              - key: AWS_SECRET_ACCESS_KEY
+                sync: false
+              - key: MSG91_AUTH_KEY
+                sync: false
+              - key: MSG91_INTEGRATED_NUMBER
+                sync: false
+              - key: MSG91_NAMESPACE
+                sync: false
+              - key: MSG91_AUTHKEY
+                sync: false
+              - key: MSG91_EMAIL_DOMAIN
+                sync: false
+              - key: MSG91_FROM_EMAIL
+                sync: false
+              - key: JWT_SECRET
+                generateValue: true
+              - key: JWT_EXPIRES_IN
+                value: 7d
+              - key: FCM_PROJECT_ID
+                sync: false
+              - key: FCM_CLIENT_EMAIL
+                sync: false
+              - key: FCM_PRIVATE_KEY
+                sync: false
+              - key: PHONEPE_CLIENT_ID
+                sync: false
+              - key: PHONEPE_CLIENT_SECRET
+                sync: false
+              - key: PHONEPE_CLIENT_VERSION
+                value: 1
+              - key: PHONEPE_WEBHOOK_USERNAME
+                sync: false
+              - key: MAIL_HOST
+                sync: false
+              - key: MAIL_PORT
+                sync: false
+              - key: MAIL_USER
+                sync: false
+              - key: MAIL_PASS
+                sync: false
+              - key: MAIL_FROM
+                sync: false
+          
+          - name: zappy-prod
+            envVars:
+              - key: NODE_ENV
+                value: production
+              - key: MONGODB_URL
+                sync: false
+              - key: AWS_S3_BUCKET
+                value: zappy-prod-bucket
+              - key: FRONTEND_URL
+                value: https://zappyeventz.com
+        
+        services:
+          - type: web
+            name: zappy-api-prod
+            env: node
+            plan: starter
+            branch: main
+            region: singapore
+            buildCommand: npm install && npm run build:prod
+            preDeployCommand: npm run migrate:up
+            startCommand: npm run start:prod
+            domains:
+              - api.zappyeventz.com
+            healthCheckPath: /health
+            envVars:
+              - key: PORT
+                value: 3000
+              - key: NODE_ENV
+                value: production
+              - key: REDIS_URL
+                fromService:
+                  name: zappy-redis-prod
+                  type: keyvalue
+                  property: connectionString
+              - fromGroup: zappy-common-prod
+              - fromGroup: zappy-prod
+            autoDeploy: true
+          
+          - type: keyvalue
+            name: zappy-redis-prod
+            plan: starter
+            region: singapore
+            ipAllowList: []
+          
+          - type: cron
+            name: zappy-backup-prod
+            env: node
+            plan: starter
+            branch: main
+            region: singapore
+            schedule: "0 1 * * *"
+            buildCommand: npm install
+            startCommand: node scripts/backup-database.js
+            envVars:
+              - key: CHECK_ENV
+                value: production
+              - fromGroup: zappy-common-prod
+              - fromGroup: zappy-prod

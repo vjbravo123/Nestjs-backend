@@ -1,0 +1,39 @@
+# Render ignore file - exclude unnecessary files from deployment
+# This speeds up builds and reduces deployment size
+
+# Development files
+.env*
+!.env.example
+*.log
+logs/
+.temp/
+.tmp/
+
+# Version control
+.git/
+.gitignore
+
+# Dependencies (will be installed during build)
+node_modules/
+
+# Tests
+test/
+coverage/
+*.spec.ts
+*.test.ts
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Documentation (optional - remove if you want docs deployed)
+*.md
+!README.md
+
+# Scripts (optional - keep if needed)
+scripts/
+
+# OS files
+.DS_Store
+Thumbs.db

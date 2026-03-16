@@ -1,0 +1,1 @@
+export default 'Booking Completed!';
