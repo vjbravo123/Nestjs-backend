@@ -20,7 +20,8 @@ import { VendorAvailabilityService } from '../vendoravailability/vendor-availabi
 import { InstallmentService } from '../installments/installment.service'
 import { mapTierSnapshot, mapAddonSnapshotsFromSimplified } from './utils/order-snapshot.utils';
 import * as PDFDocument from 'pdfkit'; 
-
+import { join } from 'path';
+import * as fs from 'fs';
 @Injectable()
 export class OrderService {
     constructor(
@@ -49,84 +50,604 @@ export class OrderService {
         @InjectConnection() private readonly connection: Connection,
     ) { }
 
+    async getUserOrdersByCheckoutId(
+    checkoutId: Types.ObjectId,
+    userId: Types.ObjectId,
+  ) {
+    console.log("👉 checkoutId,userID", checkoutId, userId);
+
+    const result = await this.orderModel.aggregate([
+
+      // ---------------------------------
+      // MATCH ORDER
+      // ---------------------------------
+      {
+        $match: {
+          checkoutIntentId: checkoutId,
+          userId,
+        },
+      },
+
+      // ---------------------------------
+      // EVENT LOOKUPS
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'birthdayevents',
+          localField: 'event.eventId',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                banner: 1,
+                city: 1,
+                description: 1,
+                duration: 1,
+                tiers: 1,
+                coreActivity: 1,
+                experientialEventCategory: 1,
+                subExperientialEventCategory: 1,
+              },
+            },
+          ],
+          as: 'birthdayEvent',
+        },
+      },
+      {
+        $lookup: {
+          from: 'experientialevents',
+          localField: 'event.eventId',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                banner: 1,
+                city: 1,
+                description: 1,
+                duration: 1,
+                tiers: 1,
+                coreActivity: 1,
+                experientialEventCategory: 1,
+                subExperientialEventCategory: 1,
+              },
+            },
+          ],
+          as: 'experientialEvent',
+        },
+      },
+
+      // ---------------------------------
+      // SELECT EVENT DATA
+      // ---------------------------------
+      {
+        $addFields: {
+          eventData: {
+            $cond: [
+              { $eq: ['$event.eventCategory', 'BirthdayEvent'] },
+              { $arrayElemAt: ['$birthdayEvent', 0] },
+              { $arrayElemAt: ['$experientialEvent', 0] },
+            ],
+          },
+        },
+      },
+
+      { $project: { birthdayEvent: 0, experientialEvent: 0 } },
+
+      // ---------------------------------
+      // FILTER EVENT TIER
+      // ---------------------------------
+      {
+        $addFields: {
+          'eventData.tiers': {
+            $filter: {
+              input: '$eventData.tiers',
+              as: 'tier',
+              cond: { $eq: ['$$tier._id', '$selectedTier.tierId'] },
+            },
+          },
+        },
+      },
+
+      // ---------------------------------
+      // EXPERIENTIAL CATEGORY
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'dropdownoptions',
+          let: {
+            ids: {
+              $cond: [
+                { $isArray: '$eventData.experientialEventCategory' },
+                '$eventData.experientialEventCategory',
+                [{ $ifNull: ['$eventData.experientialEventCategory', null] }],
+              ],
+            },
+          },
+          pipeline: [
+            { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+            { $project: { _id: 1, value: 1, label: 1, isActive: 1 } },
+          ],
+          as: 'eventData.experientialEventCategory',
+        },
+      },
+
+      // ---------------------------------
+      // SUB CATEGORY
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'subexperientialeventcategories',
+          let: {
+            ids: { $ifNull: ['$eventData.subExperientialEventCategory', []] },
+          },
+          pipeline: [
+            { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                experientialEventCategoryId: 1,
+              },
+            },
+          ],
+          as: 'eventData.subExperientialEventCategory',
+        },
+      },
+
+      // ---------------------------------
+      // ADDONS LOOKUP
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'addons',
+          let: { ids: '$addons.addOnId' },
+          pipeline: [
+            { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                banner: 1,
+                category: 1,
+                description: 1,
+                tiers: 1,
+                cityOfOperation: 1,
+                isActive: 1,
+              },
+            },
+          ],
+          as: 'addonsData',
+        },
+      },
+
+      // ---------------------------------
+      // MERGE ADDONS
+      // ---------------------------------
+      {
+        $addFields: {
+          addons: {
+            $map: {
+              input: '$addons',
+              as: 'item',
+              in: {
+                $mergeObjects: [
+                  '$$item',
+                  {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: '$addonsData',
+                          as: 'a',
+                          cond: { $eq: ['$$a._id', '$$item.addOnId'] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+
+      { $project: { addonsData: 0 } },
+
+      // ---------------------------------
+      // FILTER ADDON TIERS
+      // ---------------------------------
+      {
+        $addFields: {
+          addons: {
+            $map: {
+              input: '$addons',
+              as: 'addon',
+              in: {
+                $mergeObjects: [
+                  '$$addon',
+                  {
+                    tiers: {
+                      $filter: {
+                        input: '$$addon.tiers',
+                        as: 'tier',
+                        cond: {
+                          $eq: ['$$tier._id', '$$addon.selectedTier.tierId'],
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+
+      // ---------------------------------
+      // ✅ PAYMENT LOOKUP (LATEST)
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'payments',
+          localField: 'checkoutIntentId',
+          foreignField: 'checkoutIntentId',
+          pipeline: [
+            { $sort: { createdAt: -1 } },
+            { $limit: 1 },
+            {
+              $project: {
+                _id: 1,
+                merchantOrderId: 1,
+                merchantTransactionId: 1,
+                amount: 1,
+                currency: 1,
+                status: 1,
+                gateway: 1,
+                gatewayTransactionId: 1,
+                paidAt: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                paymentMethod: 1,
+                webhookProcessed: 1,
+                isRefunded: 1,
+                feeAmount: 1,
+
+                "gatewayResponse.payload.merchantId": 1,
+                "gatewayResponse.payload.orderId": 1,
+                "gatewayResponse.payload.state": 1,
+                "gatewayResponse.payload.amount": 1,
+                "gatewayResponse.payload.currency": 1,
+                "gatewayResponse.payload.expireAt": 1,
+                "gatewayResponse.payload.paymentDetails": 1,
+                "gatewayResponse.payload.splitInstruments": 1,
+              },
+            },
+          ],
+          as: 'paymentDetails',
+        },
+      },
+
+      // ---------------------------------
+      // FLATTEN PAYMENT
+      // ---------------------------------
+      {
+        $addFields: {
+          paymentDetails: {
+            $cond: [
+              { $gt: [{ $size: '$paymentDetails' }, 0] },
+              { $arrayElemAt: ['$paymentDetails', 0] },
+              null,
+            ],
+          },
+        },
+      },
+
+      // ---------------------------------
+      // PAYMENT RESULT
+      // ---------------------------------
+      {
+        $addFields: {
+          paymentResult: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$paymentDetails.status', 'success'] },
+                  then: 'SUCCESS',
+                },
+                {
+                  case: { $eq: ['$paymentDetails.status', 'failed'] },
+                  then: 'FAILED',
+                },
+                {
+                  case: { $eq: ['$paymentDetails.status', 'cancelled'] },
+                  then: 'CANCELLED',
+                },
+                {
+                  case: { $eq: ['$paymentDetails.status', 'pending'] },
+                  then: 'PENDING',
+                },
+              ],
+              default: 'PENDING',
+            },
+          },
+
+          isPaymentFinal: {
+            $in: ['$paymentDetails.status', ['success', 'failed', 'cancelled']],
+          },
+        },
+      },
+    ]);
+
+    console.log("👉 Aggregation result:", JSON.stringify(result, null, 2));
+
+    if (!result.length) {
+      throw new NotFoundException('Order not found or unauthorized');
+    }
+
+    return result;
+  }
 
 
 async generateBookingSummaryPdf(orderId: Types.ObjectId, userId: Types.ObjectId): Promise<Buffer> {
-    const order = await this.orderModel.findOne({ _id: orderId }).lean();
+    const aggregationResult = await this.orderModel.aggregate([
+        { $match: { _id: orderId } },
+        {
+            $lookup: {
+                from: 'birthdayevents',
+                localField: 'event.eventId',
+                foreignField: '_id',
+                as: 'birthdayEvent',
+            },
+        },
+        {
+            $lookup: {
+                from: 'experientialevents',
+                localField: 'event.eventId',
+                foreignField: '_id',
+                as: 'experientialEvent',
+            },
+        },
+        {
+            $addFields: {
+                eventData: {
+                    $cond: [
+                        { $eq: ['$event.eventCategory', 'BirthdayEvent'] },
+                        { $arrayElemAt: ['$birthdayEvent', 0] },
+                        { $arrayElemAt: ['$experientialEvent', 0] },
+                    ],
+                },
+            },
+        },
+        {
+            $lookup: {
+                from: 'payments',
+                localField: 'checkoutIntentId',
+                foreignField: 'checkoutIntentId',
+                pipeline: [{ $sort: { createdAt: -1 } }, { $limit: 1 }],
+                as: 'paymentDetailsRaw',
+            },
+        },
+        {
+            $addFields: {
+                paymentInfo: { $arrayElemAt: ['$paymentDetailsRaw', 0] }
+            }
+        }
+    ]);
+
+    const order = aggregationResult[0];
     if (!order) throw new NotFoundException('Order not found');
 
+    const logoPath = join(process.cwd(), 'src', 'assets', 'zappy-logo.png');
+    let logoBuffer: Buffer | null = null;
+    try {
+        if (fs.existsSync(logoPath)) logoBuffer = fs.readFileSync(logoPath);
+    } catch (e) { console.error("Logo not found"); }
+
     return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+        const doc = new PDFDocument({ 
+            size: 'A4', 
+            margins: { top: 35, left: 50, right: 50, bottom: 35 }
+        });
+        
+        const regularFont = join(process.cwd(), 'src', 'assets', 'fonts', 'Roboto-Regular.ttf');
+        const boldFont = join(process.cwd(), 'src', 'assets', 'fonts', 'Roboto-Bold.ttf');
+
+        doc.font(regularFont);
+        
         const buffers: Buffer[] = [];
         doc.on('data', (chunk) => buffers.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(buffers)));
         doc.on('error', reject);
 
-        // --- DESIGN SYSTEM ---
-        const colors = { primary: '#312e81', secondary: '#475569', accent: '#e0e7ff' };
-        
-        // --- HEADER ---
-        doc.fillColor(colors.primary).fontSize(26).font('Helvetica-Bold').text('BOOKING SUMMARY', { align: 'center' });
-        doc.moveDown(0.5);
-        doc.lineWidth(1).strokeColor(colors.primary).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
-        doc.moveDown(1.5);
-
-        // --- ORDER & EVENT DETAILS ---
-        // Helper to draw section headers
-        const drawSection = (title: string, yPos: number) => {
-            doc.rect(50, yPos - 5, 495, 20).fill(colors.accent);
-            doc.fillColor(colors.primary).font('Helvetica-Bold').fontSize(11).text(title, 60, yPos);
-            return yPos + 35;
+        const colors = {
+            primary: '#7c3aed', 
+            accent: '#db2777',
+            secondary: '#475569',
+            text: '#1e293b',
+            bgLight: '#f8fafc',
+            border: '#e2e8f0',
+            white: '#ffffff'
         };
 
-        let currentY = doc.y;
-        currentY = drawSection('ORDER & EVENT DETAILS', currentY);
-
-        // Mapping fields based on your provided JSON structure
-        const details = [
-            ['Order Number', order.orderNumber],
-            ['Status', (order as any).status?.toUpperCase() || 'N/A'], // Fixed here: maps to 'status'
-            ['Event Category', order.event?.eventCategory || 'N/A'],
-            ['Event Title', order.event?.eventTitle || 'N/A'],
-            ['Event Date', order.eventDate || 'N/A'],
-            ['Event Time', order.eventTime || 'N/A'],
-            ['Payment Method', (order as any).paymentDetails?.method || 'N/A']
-        ];
-
-        doc.fillColor(colors.secondary).fontSize(10);
-        details.forEach(([label, value]) => {
-            doc.font('Helvetica-Bold').text(label, 60, currentY);
-            doc.font('Helvetica').text(String(value), 220, currentY);
-            currentY += 18;
-        });
-
-        // --- PAYMENT SUMMARY ---
-        currentY += 20;
-        currentY = drawSection('PAYMENT SUMMARY', currentY);
+        const formatCurrency = (amount: number) => `₹ ${Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
         
-        const priceY = currentY;
-        const prices = [
-            ['Base Amount', order.baseAmount],
-            ['Addons', order.addonsAmount || 0],
-            ['Discount', order.discount || 0]
-        ];
+        const formatDate = (dateInput: any) => {
+            if (!dateInput) return 'N/A';
+            const d = new Date(dateInput);
+            return isNaN(d.getTime()) ? String(dateInput) : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        };
 
-        doc.fillColor(colors.secondary).fontSize(10);
-        prices.forEach(([label, val]) => {
-            doc.font('Helvetica').text(String(label), 300, currentY);
-            doc.text(`INR ${Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, currentY, { align: 'right', width: 80 });
-            currentY += 18;
-        });
+        let currentY = 35;
+        const fullWidth = 495;
 
-        // Total Amount Box
-        currentY += 5;
-        doc.rect(280, currentY, 265, 30).fill(colors.primary);
-        doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text('TOTAL AMOUNT', 300, currentY + 10);
-        doc.text(`INR ${Number(order.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 450, currentY + 10, { align: 'right', width: 80 });
+        const checkPageBreak = (neededHeight: number) => {
+            if (currentY + neededHeight > 800) { 
+                doc.addPage(); 
+                currentY = 35; 
+                doc.font(regularFont);
+            }
+        };
+
+        const drawSectionHeader = (title: string) => {
+            checkPageBreak(30);
+            doc.rect(50, currentY, fullWidth, 20).fill(colors.primary); 
+            doc.fillColor(colors.white).font(boldFont).fontSize(9).text(title.toUpperCase(), 65, currentY + 6);
+            currentY += 26;
+        };
+
+        const drawRow = (label: string, value: string | number) => {
+            const textValue = String(value || 'N/A');
+            const textHeight = doc.heightOfString(textValue, { width: 320 });
+            const rowHeight = Math.max(18, textHeight + 6);
+            
+            checkPageBreak(rowHeight);
+            doc.rect(50, currentY, fullWidth, rowHeight).fill(colors.bgLight);
+            doc.fillColor(colors.secondary).font(boldFont).fontSize(8.5).text(label, 65, currentY + (rowHeight/2 - 4));
+            doc.fillColor(colors.text).font(regularFont).fontSize(8.5).text(textValue, 180, currentY + (rowHeight/2 - 4), { width: 350 });
+            
+            doc.strokeColor(colors.border).lineWidth(0.5).moveTo(50, currentY + rowHeight).lineTo(545, currentY + rowHeight).stroke();
+            currentY += rowHeight;
+        };
+
+        const drawPriceRow = (label: string, price: string, isBold = false) => {
+            checkPageBreak(20);
+            if (isBold) doc.rect(50, currentY, fullWidth, 22).fill(colors.bgLight);
+            
+            doc.fillColor(isBold ? colors.text : colors.secondary)
+               .font(isBold ? boldFont : regularFont).fontSize(9);
+            doc.text(label, 65, currentY + (isBold ? 7 : 5));
+            doc.text(price, 50, currentY + (isBold ? 7 : 5), { align: 'right', width: 475 });
+            currentY += isBold ? 26 : 18;
+        };
+
+        // ================= HEADER =================
+        if (logoBuffer) {
+            doc.image(logoBuffer, 50, currentY, { width: 45 });
+            doc.fontSize(22).font(boldFont).fillColor(colors.primary).text('Zappy', 105, currentY + 5, { continued: true })
+               .fillColor(colors.accent).text(' Events');
+            doc.fontSize(8).font(regularFont).fillColor(colors.secondary)
+               .text('ZappyEvents Tech Private Limited', 105, currentY + 30)
+               .text('GSTIN: 27AAACZ1234A1Z5', 105, currentY + 40);
+        }
+        doc.fontSize(14).fillColor(colors.primary).font(boldFont).text('BOOKING RECEIPT', 50, currentY + 5, { align: 'right' });
+        doc.fontSize(8).fillColor(colors.secondary).font(regularFont).text(`Generated: ${formatDate(new Date())}`, 50, currentY + 20, { align: 'right' });
+
+        currentY += 65;
+
+        // ================= CUSTOMER DETAILS =================
+        const addr = order.addressDetails || {};
+        drawSectionHeader('Customer Details');
+        drawRow('Name', addr.name);
+        drawRow('Mobile', addr.mobile ? `+91 ${addr.mobile}` : 'N/A');
+        if (addr.gstin) drawRow('GSTIN', addr.gstin);
+        // Removed address from here
+        currentY += 8;
+
+        // ================= ORDER DETAILS =================
+        drawSectionHeader('Order Details');
+        drawRow('Order #', order.orderNumber);
+        drawRow('Booking Date', formatDate(order.eventBookingDate));
+        
+        const displayStatus = order.orderStatus || (order.status === 'paid' ? 'confirmed' : order.status);
+        drawRow('Booking Status', String(displayStatus || 'N/A').toUpperCase());
+        
+        const pMethod = order.paymentInfo?.paymentMethod || order.paymentDetails?.method || 'N/A';
+        drawRow('Payment Method', String(pMethod).toUpperCase());
+
+        // Added address here instead
+        const addressParts = [addr.address, addr.street, addr.city, addr.state, addr.pincode].filter(Boolean);
+        drawRow('Venue Address', addressParts.join(', '));
+        currentY += 8;
+
+        // ================= EVENT & PACKAGE =================
+        drawSectionHeader('Event & Package');
+        drawRow('Category', order.eventData?.experientialEventCategory?.[0]?.label || order.event?.eventCategory);
+        drawRow('Title', order.eventData?.title || order.event?.eventTitle);
+        drawRow('Timing', `${formatDate(order.eventDate)} at ${order.eventTime}`);
+        
+        if (order.eventData?.duration) {
+            const durationStr = String(order.eventData.duration).toLowerCase().includes('hour') 
+                ? order.eventData.duration 
+                : `${order.eventData.duration} hours`;
+            drawRow('Duration', durationStr);
+        }
+
+        if (order.selectedTier) {
+            drawRow('Package', String(order.selectedTier.name).toUpperCase());
+        }
+        currentY += 8;
+
+        if (order.addons?.length > 0) {
+            drawSectionHeader('Add-ons');
+            order.addons.forEach((addon: any, idx: number) => {
+                const label = `${idx + 1}. ${addon.name} (${addon.selectedTier?.name || 'Standard'})`;
+                drawPriceRow(label, formatCurrency(addon.selectedTier?.price || 0));
+            });
+            currentY += 8;
+        }
+
+        // ================= PAYMENT SUMMARY =================
+        drawSectionHeader('Payment Summary');
+        
+        const totalAmount = order.totalAmount || 0;
+        const discount = order.discount || 0;
+        const addonsTotal = order.addonsAmount || 0;
+        const base = order.baseAmount || 0;
+
+        const taxableAmount = totalAmount / 1.18;
+        const gstAmount = totalAmount - taxableAmount;
+
+        const pStatus = order.paymentStatus || order.status;
+        let amountPaid = 0;
+
+        if (pStatus === 'paid') {
+            amountPaid = totalAmount;
+        } else if (pStatus === 'partially_paid') {
+            amountPaid = (totalAmount * (order.payAmountPercent || 0)) / 100;
+        } else {
+            amountPaid = 0;
+        }
+        
+        const remainingAmount = totalAmount - amountPaid;
+
+        drawPriceRow('Base Package Amount', formatCurrency(base));
+        if (addonsTotal > 0) drawPriceRow('Add-ons Total', formatCurrency(addonsTotal));
+        if (discount > 0) drawPriceRow('Discount Applied', `- ${formatCurrency(discount)}`);
+        
+        currentY += 4;
+        doc.strokeColor(colors.border).lineWidth(0.5).moveTo(50, currentY).lineTo(545, currentY).stroke();
+        currentY += 4;
+
+        drawPriceRow('Taxable Value (Excl. GST)', formatCurrency(taxableAmount));
+        drawPriceRow('GST (18%)', formatCurrency(gstAmount));
+        
+        currentY += 4;
+        doc.strokeColor(colors.border).lineWidth(1).moveTo(50, currentY).lineTo(545, currentY).stroke();
+        currentY += 4;
+
+        drawPriceRow('Grand Total (Incl. Taxes)', formatCurrency(totalAmount), false);
+        drawPriceRow('Total Amount Paid', formatCurrency(amountPaid), true);
+        
+        if (remainingAmount > 0) {
+            drawPriceRow('Remaining Balance to be Paid', formatCurrency(remainingAmount), true);
+        } else {
+            drawPriceRow('Remaining Balance', formatCurrency(0));
+        }
+
+        currentY += 10;
+        checkPageBreak(40);
+        doc.rect(50, currentY, fullWidth, 30).fill(colors.primary);
+        doc.fillColor(colors.white).font(boldFont).fontSize(11).text('NET PAID AMOUNT', 65, currentY + 10);
+        doc.text(formatCurrency(amountPaid), 50, currentY + 10, { align: 'right', width: 475 });
 
         doc.end();
     });
 }
+
 
     async createOrder(dto: CreateOrderDto, userId: Types.ObjectId) {
         const session = await this.connection.startSession();

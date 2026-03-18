@@ -83,6 +83,20 @@ export class OrderController {
     );
   }
 
+  @Get('checkout/:checkoutId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('user')
+  @RequireOwnership('userId')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async getMyOrdersByCheckoutId(
+    @Param('checkoutId', MongoIdPipe) checkoutId: Types.ObjectId,
+    @CurrentUser() { userId }: AuthUser,
+  ) {
+    // console.log(userId)
+    return this.orderQueryService.getUserOrdersByCheckoutId(checkoutId, userId!);
+  }
+
+
   // endpoint to create the pdf of booking summary
   @Get(':orderId/pdf')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -93,7 +107,7 @@ export class OrderController {
     @CurrentUser() user: AuthUser,
     @Res({ passthrough: true }) res: any,
   ) {
-    console.log(orderId , user.userId);
+    console.log(orderId , user);
     
     const pdfBuffer = await this.orderService.generateBookingSummaryPdf(orderId, user.userId!);
     

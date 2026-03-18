@@ -340,13 +340,12 @@ export class CheckoutService {
     // =====================================================
     // 🔍 GET CHECKOUT INTENT WITH DETAILS (OWNER ONLY)
     // =====================================================
-    // =====================================================
-    // 🔍 GET CHECKOUT INTENT WITH DETAILS (OWNER ONLY)
-    // =====================================================
     async getCheckoutIntentWithDetails(
         intentId: Types.ObjectId,
         userId: Types.ObjectId,
     ) {
+        console.log(intentId , userId);
+        
         const result = await this.checkoutIntentModel.aggregate([
             // ---------------------------------
             // MATCH CHECKOUT INTENT
@@ -629,6 +628,7 @@ export class CheckoutService {
 
         return result[0];
     }
+
 
 
     // =====================================================

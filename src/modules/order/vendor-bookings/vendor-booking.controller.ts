@@ -11,6 +11,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Res, Header, StreamableFile } from '@nestjs/common';
+import { Response } from 'express';
 import { VendorOrdersQueryDto } from '../dto/vendor-orders-query.dto';
 import { VendorBookingService } from './vendor-booking.service';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -104,4 +106,6 @@ export class VendorBookingController {
       bookingId,
     );
   }
+
+
 }

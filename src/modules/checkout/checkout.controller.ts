@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  Res,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PoliciesGuard } from '../../common/casl/policies.guard';
@@ -77,6 +78,8 @@ export class CheckoutController {
     };
   }
 
+ 
+
   // ─────────────────────────────────────────────
   // 🔍 GET CHECKOUT INTENT WITH DETAILS (OWNER ONLY)
   // ─────────────────────────────────────────────
@@ -98,3 +101,4 @@ export class CheckoutController {
     };
   }
 }
+

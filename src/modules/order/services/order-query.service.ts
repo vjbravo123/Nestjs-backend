@@ -1280,6 +1280,347 @@ export class OrderQueryService {
     return result;
   }
 
+  async getUserOrdersByCheckoutId(
+    checkoutId: Types.ObjectId,
+    userId: Types.ObjectId,
+  ) {
+    // console.log("👉 checkoutId,userID", checkoutId, userId);
+
+    const result = await this.orderModel.aggregate([
+
+      // ---------------------------------
+      // MATCH ORDER
+      // ---------------------------------
+      {
+        $match: {
+          checkoutBatchId: checkoutId,
+          userId,
+        },
+      },
+
+      // ---------------------------------
+      // EVENT LOOKUPS
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'birthdayevents',
+          localField: 'event.eventId',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                banner: 1,
+                city: 1,
+                description: 1,
+                duration: 1,
+                tiers: 1,
+                coreActivity: 1,
+                experientialEventCategory: 1,
+                subExperientialEventCategory: 1,
+              },
+            },
+          ],
+          as: 'birthdayEvent',
+        },
+      },
+      {
+        $lookup: {
+          from: 'experientialevents',
+          localField: 'event.eventId',
+          foreignField: '_id',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                banner: 1,
+                city: 1,
+                description: 1,
+                duration: 1,
+                tiers: 1,
+                coreActivity: 1,
+                experientialEventCategory: 1,
+                subExperientialEventCategory: 1,
+              },
+            },
+          ],
+          as: 'experientialEvent',
+        },
+      },
+
+      // ---------------------------------
+      // SELECT EVENT DATA
+      // ---------------------------------
+      {
+        $addFields: {
+          eventData: {
+            $cond: [
+              { $eq: ['$event.eventCategory', 'BirthdayEvent'] },
+              { $arrayElemAt: ['$birthdayEvent', 0] },
+              { $arrayElemAt: ['$experientialEvent', 0] },
+            ],
+          },
+        },
+      },
+
+      { $project: { birthdayEvent: 0, experientialEvent: 0 } },
+
+      // ---------------------------------
+      // FILTER EVENT TIER
+      // ---------------------------------
+      {
+        $addFields: {
+          'eventData.tiers': {
+            $filter: {
+              input: '$eventData.tiers',
+              as: 'tier',
+              cond: { $eq: ['$$tier._id', '$selectedTier.tierId'] },
+            },
+          },
+        },
+      },
+
+      // ---------------------------------
+      // EXPERIENTIAL CATEGORY
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'dropdownoptions',
+          let: {
+            ids: {
+              $cond: [
+                { $isArray: '$eventData.experientialEventCategory' },
+                '$eventData.experientialEventCategory',
+                [{ $ifNull: ['$eventData.experientialEventCategory', null] }],
+              ],
+            },
+          },
+          pipeline: [
+            { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+            { $project: { _id: 1, value: 1, label: 1, isActive: 1 } },
+          ],
+          as: 'eventData.experientialEventCategory',
+        },
+      },
+
+      // ---------------------------------
+      // SUB CATEGORY
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'subexperientialeventcategories',
+          let: {
+            ids: { $ifNull: ['$eventData.subExperientialEventCategory', []] },
+          },
+          pipeline: [
+            { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                experientialEventCategoryId: 1,
+              },
+            },
+          ],
+          as: 'eventData.subExperientialEventCategory',
+        },
+      },
+
+      // ---------------------------------
+      // ADDONS LOOKUP
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'addons',
+          let: { ids: '$addons.addOnId' },
+          pipeline: [
+            { $match: { $expr: { $in: ['$_id', '$$ids'] } } },
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                banner: 1,
+                category: 1,
+                description: 1,
+                tiers: 1,
+                cityOfOperation: 1,
+                isActive: 1,
+              },
+            },
+          ],
+          as: 'addonsData',
+        },
+      },
+
+      // ---------------------------------
+      // MERGE ADDONS
+      // ---------------------------------
+      {
+        $addFields: {
+          addons: {
+            $map: {
+              input: '$addons',
+              as: 'item',
+              in: {
+                $mergeObjects: [
+                  '$$item',
+                  {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: '$addonsData',
+                          as: 'a',
+                          cond: { $eq: ['$$a._id', '$$item.addOnId'] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+
+      { $project: { addonsData: 0 } },
+
+      // ---------------------------------
+      // FILTER ADDON TIERS
+      // ---------------------------------
+      {
+        $addFields: {
+          addons: {
+            $map: {
+              input: '$addons',
+              as: 'addon',
+              in: {
+                $mergeObjects: [
+                  '$$addon',
+                  {
+                    tiers: {
+                      $filter: {
+                        input: '$$addon.tiers',
+                        as: 'tier',
+                        cond: {
+                          $eq: ['$$tier._id', '$$addon.selectedTier.tierId'],
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+
+      // ---------------------------------
+      // ✅ PAYMENT LOOKUP (LATEST)
+      // ---------------------------------
+      {
+        $lookup: {
+          from: 'payments',
+          localField: 'checkoutIntentId',
+          foreignField: 'checkoutIntentId',
+          pipeline: [
+            { $sort: { createdAt: -1 } },
+            { $limit: 1 },
+            {
+              $project: {
+                _id: 1,
+                merchantOrderId: 1,
+                merchantTransactionId: 1,
+                amount: 1,
+                currency: 1,
+                status: 1,
+                gateway: 1,
+                gatewayTransactionId: 1,
+                paidAt: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                paymentMethod: 1,
+                webhookProcessed: 1,
+                isRefunded: 1,
+                feeAmount: 1,
+
+                "gatewayResponse.payload.merchantId": 1,
+                "gatewayResponse.payload.orderId": 1,
+                "gatewayResponse.payload.state": 1,
+                "gatewayResponse.payload.amount": 1,
+                "gatewayResponse.payload.currency": 1,
+                "gatewayResponse.payload.expireAt": 1,
+                "gatewayResponse.payload.paymentDetails": 1,
+                "gatewayResponse.payload.splitInstruments": 1,
+              },
+            },
+          ],
+          as: 'paymentDetails',
+        },
+      },
+
+      // ---------------------------------
+      // FLATTEN PAYMENT
+      // ---------------------------------
+      {
+        $addFields: {
+          paymentDetails: {
+            $cond: [
+              { $gt: [{ $size: '$paymentDetails' }, 0] },
+              { $arrayElemAt: ['$paymentDetails', 0] },
+              null,
+            ],
+          },
+        },
+      },
+
+      // ---------------------------------
+      // PAYMENT RESULT
+      // ---------------------------------
+      {
+        $addFields: {
+          paymentResult: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$paymentDetails.status', 'success'] },
+                  then: 'SUCCESS',
+                },
+                {
+                  case: { $eq: ['$paymentDetails.status', 'failed'] },
+                  then: 'FAILED',
+                },
+                {
+                  case: { $eq: ['$paymentDetails.status', 'cancelled'] },
+                  then: 'CANCELLED',
+                },
+                {
+                  case: { $eq: ['$paymentDetails.status', 'pending'] },
+                  then: 'PENDING',
+                },
+              ],
+              default: 'PENDING',
+            },
+          },
+
+          isPaymentFinal: {
+            $in: ['$paymentDetails.status', ['success', 'failed', 'cancelled']],
+          },
+        },
+      },
+    ]);
+
+    // console.log("👉 Aggregation result:", JSON.stringify(result, null, 2));
+
+    if (!result.length) {
+      throw new NotFoundException('Order not found or unauthorized');
+    }
+
+    return result;
+  }
+  
   async getUserOrderCount(userId: Types.ObjectId) {
     const today = new Date().toISOString().slice(0, 10);
     console.log('Today date is :', today);

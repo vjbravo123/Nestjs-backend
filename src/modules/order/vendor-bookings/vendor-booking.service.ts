@@ -7,7 +7,8 @@ import { VendorBookingsQueryDto } from '../dto/vendor-bookings-query.dto';
 import { OrderService } from '../order.service'
 import { VendorService } from 'src/modules/vendor/vendor.service';
 import { VendorAvailabilityService } from '../../vendoravailability/vendor-availability.service'
-
+import * as PDFDocument from 'pdfkit';
+import { ForbiddenException } from '@nestjs/common';
 @Injectable()
 export class VendorBookingService {
     constructor(
@@ -17,6 +18,9 @@ export class VendorBookingService {
         @Inject(forwardRef(() => OrderService)) private readonly orderService: OrderService,
         private readonly vendorAvailabilityService: VendorAvailabilityService
     ) { }
+
+  
+
 
     async createVendorBookingsFromOrders(
         orders: any[],
