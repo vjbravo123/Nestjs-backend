@@ -531,7 +531,7 @@ async generateBookingSummaryPdf(orderId: Types.ObjectId, userId: Types.ObjectId)
                .fillColor(colors.accent).text(' Events');
             doc.fontSize(8).font(regularFont).fillColor(colors.secondary)
                .text('ZappyEvents Tech Private Limited', 105, currentY + 30)
-               .text('GSTIN: 27AAACZ1234A1Z5', 105, currentY + 40);
+            //    .text('GSTIN: 27AAACZ1234A1Z5', 105, currentY + 40);
         }
         doc.fontSize(14).fillColor(colors.primary).font(boldFont).text('BOOKING RECEIPT', 50, currentY + 5, { align: 'right' });
         doc.fontSize(8).fillColor(colors.secondary).font(regularFont).text(`Generated: ${formatDate(new Date())}`, 50, currentY + 20, { align: 'right' });
