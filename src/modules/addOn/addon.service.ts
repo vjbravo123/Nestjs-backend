@@ -12,20 +12,21 @@ import { Category } from '../category/category.schema';
 import { CreateAddOnDto } from './dto/create-addon.dto';
 import { UpdateAddOnDto } from './dto/update-addon.dto';
 import { VendorAvailabilityService } from '../vendoravailability/vendor-availability.service'; // Adjust path
-import { AdminQueryAddOnDto, UpdatePendingAddOnDto } from './dto/admin-addons.dto';
+import {
+  AdminQueryAddOnDto,
+  UpdatePendingAddOnDto,
+} from './dto/admin-addons.dto';
 import { FilterQuery, SortOrder } from 'mongoose';
 import { PublicQueryAddOnDto } from './dto/public-query-addon.dto';
 import { VendorQueryAddOnDto } from './dto/vendor-addons.dto';
 import { lookupAndUnwind } from 'src/common/utils/mongoose-lookup.util';
 import { AuthUser } from 'src/modules/auth/types/auth-user.type';
 import { VendorEditAddOnDto } from './dto/update-addon.dto';
-import { extractS3KeyFromUrl } from "../../common/utils/s3-upload.util";
+import { extractS3KeyFromUrl } from '../../common/utils/s3-upload.util';
 import { deleteImageFromS3 } from 'src/common/utils/s3-upload.util';
 import { AddOnHistoryService } from '../addon-history/addon-history.service';
 import logger from '../../common/utils/logger';
 import { SlotType } from '../vendoravailability/vendor-availability.schema';
-
-
 
 import { OrderService } from '../order/order.service';
 import { OrderAvailabilityService } from '../order/services/order-availability.service';
@@ -33,6 +34,10 @@ import { City } from 'src/modules/city/city.schema';
 import { add } from 'winston';
 
 import { normalizeToDateOnly } from '../vendoravailability/availability.utils';
+import {
+  Commission,
+  CommissionDocument,
+} from '../commission/commission.schema';
 
 function extractNewValues(changes) {
   const result = {};
@@ -41,15 +46,13 @@ function extractNewValues(changes) {
     if (!changes[key]) continue;
 
     // If it's simple "oldValue / newValue" format
-    if (typeof changes[key] === "object" && "newValue" in changes[key]) {
+    if (typeof changes[key] === 'object' && 'newValue' in changes[key]) {
       result[key] = changes[key].newValue;
     }
   }
 
   return result;
 }
-
-
 
 @Injectable()
 export class AddOnService {
@@ -60,12 +63,18 @@ export class AddOnService {
     private readonly addonHistoryService: AddOnHistoryService,
     private readonly orderService: OrderService,
     private readonly orderAvailabilityService: OrderAvailabilityService,
+    @InjectModel(Commission.name)
+    private readonly commissionModel: Model<CommissionDocument>,
+
     @InjectModel(Category.name)
     private readonly categoryModel: Model<Category>,
-  ) { }
-  async create(dto: CreateAddOnDto, vendorId: Types.ObjectId): Promise<AddOnDocument> {
+  ) {}
+  async create(
+    dto: CreateAddOnDto,
+    vendorId: Types.ObjectId,
+  ): Promise<AddOnDocument> {
     // if (!user) throw new BadRequestException('User information is required');
-    console.log("Creating AddOn with DTO:", dto,);
+    console.log('Creating AddOn with DTO:', dto);
     // 🧱 Prepare pendingChanges (for admin approval flow)
     const pendingChanges: AddOn['pendingChanges'] = {
       ...dto,
@@ -95,18 +104,17 @@ export class AddOnService {
     return saved;
   }
 
-
   async getAddonById(addOnId: string) {
     const objectId = new Types.ObjectId(addOnId);
-    console.log("ina addon convert object id", objectId)
+    console.log('ina addon convert object id', objectId);
     const addOn = await this.addOnModel.findById(objectId);
     return addOn;
   }
 
-
-
   async getAddOnsListByAdmin(query: AdminQueryAddOnDto) {
-    logger.info(`getAddOnsListByAdminV2 called with query: ${JSON.stringify(query)}`);
+    logger.info(
+      `getAddOnsListByAdminV2 called with query: ${JSON.stringify(query)}`,
+    );
 
     const {
       search,
@@ -214,7 +222,12 @@ export class AddOnService {
         $addFields: {
           banner: {
             $cond: [
-              { $gt: [{ $size: { $ifNull: ['$pendingChanges.banner', []] } }, 0] },
+              {
+                $gt: [
+                  { $size: { $ifNull: ['$pendingChanges.banner', []] } },
+                  0,
+                ],
+              },
               { $arrayElemAt: ['$pendingChanges.banner', 0] },
               { $arrayElemAt: ['$banner', 0] },
             ],
@@ -226,7 +239,11 @@ export class AddOnService {
                   $cond: [
                     {
                       $gt: [
-                        { $size: { $ifNull: ['$pendingChanges.cityOfOperation', []] } },
+                        {
+                          $size: {
+                            $ifNull: ['$pendingChanges.cityOfOperation', []],
+                          },
+                        },
                         0,
                       ],
                     },
@@ -243,7 +260,12 @@ export class AddOnService {
               $ifNull: [
                 {
                   $cond: [
-                    { $gt: [{ $size: { $ifNull: ['$pendingChanges.tiers', []] } }, 0] },
+                    {
+                      $gt: [
+                        { $size: { $ifNull: ['$pendingChanges.tiers', []] } },
+                        0,
+                      ],
+                    },
                     '$pendingChanges.tiers',
                     '$tiers',
                   ],
@@ -261,30 +283,30 @@ export class AddOnService {
       dynamicProject
         ? { $project: dynamicProject }
         : {
-          $project: {
-            _id: 1,
-            name: 1,
-            category: {
+            $project: {
               _id: 1,
               name: 1,
-              label: 1,
+              category: {
+                _id: 1,
+                name: 1,
+                label: 1,
+              },
+              createdBy: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+              },
+              banner: 1,
+              exclusion: 1,
+              isQuantityRequired: 1,
+              totalCities: 1,
+              totalTiers: 1,
+              updateStatus: 1,
+              isActive: 1,
+              popular: 1,
+              createdAt: 1,
             },
-            createdBy: {
-              _id: 1,
-              firstName: 1,
-              lastName: 1,
-            },
-            banner: 1,
-            exclusion: 1,
-            isQuantityRequired: 1,
-            totalCities: 1,
-            totalTiers: 1,
-            updateStatus: 1,
-            isActive: 1,
-            popular: 1,
-            createdAt: 1,
           },
-        },
 
       { $skip: skip },
       { $limit: perPage },
@@ -299,7 +321,9 @@ export class AddOnService {
     // ✅ 6️⃣ Response
     return {
       success: true,
-      message: data.length ? 'Add-ons fetched successfully' : 'No add-ons found',
+      message: data.length
+        ? 'Add-ons fetched successfully'
+        : 'No add-ons found',
       results: data,
       totalResults: totalCount,
       totalPages: Math.ceil(totalCount / perPage),
@@ -308,9 +332,6 @@ export class AddOnService {
     };
   }
 
-
-
-
   async getAddOnDetailsByAdmin(addOnId: string) {
     const objectId = new Types.ObjectId(addOnId);
 
@@ -318,21 +339,34 @@ export class AddOnService {
       { $match: { _id: objectId } },
 
       // 🏷️ Populate category
-      ...lookupAndUnwind('category', 'categories', 'category', { name: 1, label: 1 }, true),
+      ...lookupAndUnwind(
+        'category',
+        'categories',
+        'category',
+        { name: 1, label: 1 },
+        true,
+      ),
 
       // 👤 Populate createdBy (Vendor)
-      ...lookupAndUnwind('createdBy', 'vendors', 'createdBy', {
-        firstName: 1,
-        lastName: 1,
-        email: 1,
-      }, true),
+      ...lookupAndUnwind(
+        'createdBy',
+        'vendors',
+        'createdBy',
+        {
+          firstName: 1,
+          lastName: 1,
+          email: 1,
+        },
+        true,
+      ),
 
       // 🕒 Populate pendingChanges.category
       ...lookupAndUnwind(
         'pendingChanges.category',
         'categories',
         'pendingChangesCategory',
-        { name: 1, label: 1 }, true
+        { name: 1, label: 1 },
+        true,
       ),
 
       // 🔄 Replace pendingChanges.category with populated data
@@ -360,19 +394,27 @@ export class AddOnService {
     return d.toISOString().split('T')[0]; // YYYY-MM-DD
   }
 
-
   async getPublicAddOnById(addOnId: string, date?: string) {
     const objectId = new Types.ObjectId(addOnId);
-    console.log("Fetching public AddOn by ID:", addOnId, "Date:", date);
+    console.log('Fetching public AddOn by ID:', addOnId, 'Date:', date);
 
     const pipeline: PipelineStage[] = [
       { $match: { _id: objectId, isActive: true, isVerify: true } },
 
       // Lookup category (select only name, label)
-      ...lookupAndUnwind('category', 'categories', 'category', { name: 1, label: 1 }),
+      ...lookupAndUnwind('category', 'categories', 'category', {
+        name: 1,
+        label: 1,
+      }),
 
       // Optional: lookup createdBy vendor name (if needed for UI)
-      ...lookupAndUnwind('createdBy', 'vendors', 'createdBy', { businessName: 1 }, false),
+      ...lookupAndUnwind(
+        'createdBy',
+        'vendors',
+        'createdBy',
+        { businessName: 1 },
+        false,
+      ),
 
       {
         $project: {
@@ -408,15 +450,17 @@ export class AddOnService {
 
     // If date is provided, fetch vendor availability
     if (date && addOn.createdBy) {
-      const vendorId = typeof addOn.createdBy === 'object'
-        ? addOn.createdBy._id
-        : addOn.createdBy;
+      const vendorId =
+        typeof addOn.createdBy === 'object'
+          ? addOn.createdBy._id
+          : addOn.createdBy;
 
       try {
-        const availability = await this.vendorAvailabilityService.checkAvailability(
-          new Types.ObjectId(vendorId),
-          date,
-        );
+        const availability =
+          await this.vendorAvailabilityService.checkAvailability(
+            new Types.ObjectId(vendorId),
+            date,
+          );
 
         addOn.availability = {
           date: date,
@@ -461,7 +505,9 @@ export class AddOnService {
         const newBanners = Array.isArray(value)
           ? value.filter((v): v is string => typeof v === 'string')
           : [];
-        const merged = Array.from(new Set([...(addOn.banner || []), ...newBanners]));
+        const merged = Array.from(
+          new Set([...(addOn.banner || []), ...newBanners]),
+        );
         addOn.banner = merged;
       } else if (key === 'tiers' && Array.isArray(value)) {
         // Ensure all tiers have required fields
@@ -482,7 +528,7 @@ export class AddOnService {
       addOnId: addOn._id,
       updatedBy: adminId,
       updatedByRole: 'admin', // 'admin' or 'vendor'
-      oldData,  // You might want to fetch the old data before saving
+      oldData, // You might want to fetch the old data before saving
       newData: addOn.pendingChanges || {},
       updateStatus: 'approved',
       comment: 'Addon updated by admin',
@@ -496,14 +542,10 @@ export class AddOnService {
     // Optional: Store the reason
     if (reason) (addOn as any).approvalNote = reason;
 
-
-
-
-    console.log("after recording history");
+    console.log('after recording history');
     const saved = await addOn.save();
     return saved;
   }
-
 
   async rejectAddOn(
     addOnId: string,
@@ -513,7 +555,10 @@ export class AddOnService {
     const addOn = await this.addOnModel.findById(addOnId);
     if (!addOn) throw new NotFoundException('Add-on not found');
 
-    if (!addOn.pendingChanges || Object.keys(addOn.pendingChanges).length === 0) {
+    if (
+      !addOn.pendingChanges ||
+      Object.keys(addOn.pendingChanges).length === 0
+    ) {
       throw new BadRequestException('No pending changes found');
     }
 
@@ -528,7 +573,7 @@ export class AddOnService {
       addOnId: addOn._id,
       updatedBy: adminId,
       updatedByRole: 'admin', // 'admin' or 'vendor'
-      oldData,  // You might want to fetch the old data before saving
+      oldData, // You might want to fetch the old data before saving
       newData: addOn.pendingChanges || {},
       updateStatus: 'rejected',
       comment: 'Addon updated by admin',
@@ -558,14 +603,14 @@ export class AddOnService {
   async toggleActiveByVendor(id: string, vendorId: Types.ObjectId) {
     const addOn = await this.addOnModel.findById(id);
     if (!addOn) throw new NotFoundException('Add-on not found');
-    if (String(addOn.createdBy) !== String(vendorId)) throw new ForbiddenException('Unauthorized');
+    if (String(addOn.createdBy) !== String(vendorId))
+      throw new ForbiddenException('Unauthorized');
     addOn.isActive = !addOn.isActive;
     await addOn.save();
     return addOn;
   }
 
   async toggleBlockByAdmin(id: string) {
-
     const addOn = await this.addOnModel.findById(id);
     if (!addOn) throw new NotFoundException('Add-on not found');
     addOn.isBlock = !addOn.isBlock;
@@ -574,8 +619,7 @@ export class AddOnService {
   }
 
   async getPublicAddOns(query: PublicQueryAddOnDto) {
-
-    console.log("🚀 getPublicAddOns called with query:", query);
+    console.log('🚀 getPublicAddOns called with query:', query);
 
     const {
       search,
@@ -591,7 +635,7 @@ export class AddOnService {
       sortBy,
     } = query;
 
-    console.log("📥 Extracted query params:", {
+    console.log('📥 Extracted query params:', {
       search,
       category,
       city,
@@ -615,62 +659,62 @@ export class AddOnService {
       isBlock: { $ne: true },
     };
 
-    console.log("🧩 Initial filter:", filter);
+    console.log('🧩 Initial filter:', filter);
 
     if (search) {
-      console.log("🔎 Applying search filter:", search);
+      console.log('🔎 Applying search filter:', search);
 
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-        { tags: { $regex: search, $options: "i" } },
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
       ];
     }
 
     if (categoryId || addOns) {
-      console.log("📂 categoryId/addOns received:", categoryId || addOns);
+      console.log('📂 categoryId/addOns received:', categoryId || addOns);
 
       try {
         const rawIds = (categoryId || addOns)
-          .split(",")
+          .split(',')
           .map((id: string) => id.trim())
           .filter((id) => Types.ObjectId.isValid(id))
           .map((id) => new Types.ObjectId(id));
 
-        console.log("✅ Parsed category ObjectIds:", rawIds);
+        console.log('✅ Parsed category ObjectIds:', rawIds);
 
         if (rawIds.length) filter.category = { $in: rawIds };
       } catch (err) {
-        console.warn("⚠️ Invalid category/addOns filter input", err);
+        console.warn('⚠️ Invalid category/addOns filter input', err);
       }
     }
 
     if (category && Types.ObjectId.isValid(category)) {
-      console.log("📌 Applying single category filter:", category);
+      console.log('📌 Applying single category filter:', category);
       filter.category = new Types.ObjectId(category);
     }
 
     if (city) {
-      console.log("🏙 Applying city filter:", city);
+      console.log('🏙 Applying city filter:', city);
 
       filter.cityOfOperation = {
         $elemMatch: {
-          name: { $regex: `^${city}$`, $options: "i" },
+          name: { $regex: `^${city}$`, $options: 'i' },
         },
       };
     }
 
     if (createdBy) {
-      console.log("👤 Filtering by createdBy:", createdBy);
+      console.log('👤 Filtering by createdBy:', createdBy);
       filter.createdBy = createdBy;
     }
 
-    if (typeof popular === "boolean") {
-      console.log("⭐ Filtering by popular:", popular);
+    if (typeof popular === 'boolean') {
+      console.log('⭐ Filtering by popular:', popular);
       filter.popular = popular;
     }
 
-    console.log("🧩 Final Mongo filter:", JSON.stringify(filter, null, 2));
+    console.log('🧩 Final Mongo filter:', JSON.stringify(filter, null, 2));
 
     // -------------------------
     // Pagination Options
@@ -680,17 +724,17 @@ export class AddOnService {
       limit: Number(limit),
       sortBy,
       select:
-        "name description price tiers exclusion category banner popular isActive createdAt createdBy isQuantityRequired cityOfOperation",
-      populate: "category:name label",
+        'name description price tiers exclusion category banner popular isActive createdAt createdBy isQuantityRequired cityOfOperation',
+      populate: 'category:name label',
       lean: true,
     };
 
-    console.log("📄 Pagination options:", options);
+    console.log('📄 Pagination options:', options);
 
     // -------------------------
     // Run queries in parallel
     // -------------------------
-    console.log("⚡ Running paginate and aggregation queries...");
+    console.log('⚡ Running paginate and aggregation queries...');
 
     const [result, uniqueCategories] = await Promise.all([
       (this.addOnModel as any).paginate(filter, options),
@@ -699,37 +743,37 @@ export class AddOnService {
         { $match: filter },
         {
           $group: {
-            _id: "$category",
+            _id: '$category',
           },
         },
         {
           $lookup: {
-            from: "categories",
-            localField: "_id",
-            foreignField: "_id",
-            as: "category",
+            from: 'categories',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'category',
           },
         },
-        { $unwind: "$category" },
+        { $unwind: '$category' },
         {
           $project: {
-            _id: "$category._id",
-            name: "$category.name",
-            label: "$category.label",
+            _id: '$category._id',
+            name: '$category.name',
+            label: '$category.label',
           },
         },
       ]),
     ]);
 
-    console.log("📊 Paginate result:", result);
-    console.log("📊 Unique categories:", uniqueCategories);
+    console.log('📊 Paginate result:', result);
+    console.log('📊 Unique categories:', uniqueCategories);
 
     if (!result || !Array.isArray(result.results)) {
-      console.log("⚠️ No results found");
+      console.log('⚠️ No results found');
 
       return {
         success: true,
-        message: "Public Add-ons fetched successfully",
+        message: 'Public Add-ons fetched successfully',
         results: [],
         categories: uniqueCategories,
         page: Number(page),
@@ -741,8 +785,8 @@ export class AddOnService {
 
     const addons = result.results;
 
-    console.log("📦 Addons fetched:", addons.length);
-    console.log("📦 Addons data:", addons);
+    console.log('📦 Addons fetched:', addons.length);
+    console.log('📦 Addons data:', addons);
 
     // -------------------------
     // Vendor IDs extraction
@@ -751,31 +795,35 @@ export class AddOnService {
       new Set(
         addons
           .map((a: any) => a?.createdBy?.toString())
-          .filter((id: any) => typeof id === "string" && Types.ObjectId.isValid(id))
-      )
+          .filter(
+            (id: any) => typeof id === 'string' && Types.ObjectId.isValid(id),
+          ),
+      ),
     );
 
-    console.log("👥 Extracted vendorIds:", vendorIds);
+    console.log('👥 Extracted vendorIds:', vendorIds);
 
     // -------------------------
     // Weekly Availability
     // -------------------------
     const DAY_MAP: Record<number, string> = {
-      0: "Sunday",
-      1: "Monday",
-      2: "Tuesday",
-      3: "Wednesday",
-      4: "Thursday",
-      5: "Friday",
-      6: "Saturday",
+      0: 'Sunday',
+      1: 'Monday',
+      2: 'Tuesday',
+      3: 'Wednesday',
+      4: 'Thursday',
+      5: 'Friday',
+      6: 'Saturday',
     };
 
-    console.log("📅 Fetching vendor availability...");
+    console.log('📅 Fetching vendor availability...');
 
     const vendorAvailabilities =
-      await this.vendorAvailabilityService.getAvailabilitiesForVendors(vendorIds);
+      await this.vendorAvailabilityService.getAvailabilitiesForVendors(
+        vendorIds,
+      );
 
-    console.log("📅 Vendor availabilities:", vendorAvailabilities);
+    console.log('📅 Vendor availabilities:', vendorAvailabilities);
 
     const availabilityMap = new Map<string, any>();
 
@@ -785,7 +833,7 @@ export class AddOnService {
       }
     });
 
-    console.log("🗺 Availability map created:", availabilityMap);
+    console.log('🗺 Availability map created:', availabilityMap);
 
     const addonsWithAvailability = addons.map((addon: any) => {
       const vendorId = addon?.createdBy?.toString();
@@ -796,13 +844,13 @@ export class AddOnService {
 
       const weeklySlots = Array.isArray(vendorAvailability?.weeklySlots)
         ? vendorAvailability.weeklySlots.map((slot: any) => ({
-          day: slot.day,
-          dayName: DAY_MAP[slot.day] ?? "Unknown",
-          slots: Array.isArray(slot.slots) ? slot.slots : [],
-        }))
+            day: slot.day,
+            dayName: DAY_MAP[slot.day] ?? 'Unknown',
+            slots: Array.isArray(slot.slots) ? slot.slots : [],
+          }))
         : [];
 
-      console.log("🧾 Addon vendor availability:", {
+      console.log('🧾 Addon vendor availability:', {
         addonId: addon._id,
         vendorId,
         weeklySlots,
@@ -814,23 +862,59 @@ export class AddOnService {
       };
     });
 
-    result.results = addonsWithAvailability;
+    //NEW PRICING LOGIC (Merging Commission Pricing into Tiers)
+    const addonIds = addons.map((a) => a._id);
+    // Fetch all commissions for these addons (using serviceId as linked in the commission schema)
+    const commissions = await this.commissionModel
+      .find({ serviceId: { $in: addonIds } })
+      .lean();
+    const commissionMap = new Map(
+      commissions
+        .filter((c) => c.serviceId)
+        .map((c) => [c.serviceId!.toString(), c]),
+    );
 
-    console.log("✅ Final addons with availability:", addonsWithAvailability);
+    const addonsWithPricing = addonsWithAvailability.map((addon: any) => {
+      const commission = commissionMap.get(addon._id.toString());
+      if (!commission) return addon;
+
+      // Merge pricing for each tier
+      const updatedTiers = addon.tiers.map((tier: any) => {
+        const matchingCommTier = commission.tiers.find(
+          (ct: any) => ct.tierId.toString() === tier._id.toString(),
+        );
+
+        return {
+          ...tier,
+          pricing: matchingCommTier?.pricing?.userPayment
+            ? { userPayment: matchingCommTier.pricing.userPayment } 
+            : null,
+        };
+      });
+
+      return {
+        ...addon,
+        tiers: updatedTiers,
+      };
+    });
+
+    result.results = addonsWithPricing;
+
+    // console.log("✅ Final addons with availability:", addonsWithAvailability);
+    console.log('✅ Final addons with availability and pricing:', result.results);
 
     // -------------------------
     // Final Response
     // -------------------------
-    console.log("📤 Sending final response");
+    console.log('📤 Sending final response');
 
     return {
       success: true,
-      message: "Public Add-ons fetched successfully",
+      message: 'Public Add-ons fetched successfully',
       categories: uniqueCategories,
       ...result,
     };
   }
-
 
   async getFilteredAddOnCategories(query: PublicQueryAddOnDto) {
     const {
@@ -856,23 +940,23 @@ export class AddOnService {
 
     if (search) {
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-        { tags: { $regex: search, $options: "i" } },
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
       ];
     }
 
     if (categoryId || addOns) {
       try {
         const rawIds = (categoryId || addOns)
-          .split(",")
+          .split(',')
           .map((id: string) => id.trim())
           .filter((id) => Types.ObjectId.isValid(id))
           .map((id) => new Types.ObjectId(id));
 
         if (rawIds.length) filter.category = { $in: rawIds };
       } catch (err) {
-        console.warn("Invalid category/addOns filter input", err);
+        console.warn('Invalid category/addOns filter input', err);
       }
     }
 
@@ -883,15 +967,15 @@ export class AddOnService {
     if (city) {
       filter.cityOfOperation = {
         $elemMatch: {
-          name: { $regex: `^${city}$`, $options: "i" },
+          name: { $regex: `^${city}$`, $options: 'i' },
         },
       };
     }
 
     if (createdBy) filter.createdBy = createdBy;
-    if (typeof popular === "boolean") filter.popular = popular;
+    if (typeof popular === 'boolean') filter.popular = popular;
 
-    console.log("📂 Category Filter:", filter);
+    console.log('📂 Category Filter:', filter);
 
     // -------------------------
     // Aggregate Only Categories
@@ -900,23 +984,23 @@ export class AddOnService {
       { $match: filter },
       {
         $group: {
-          _id: "$category",
+          _id: '$category',
         },
       },
       {
         $lookup: {
-          from: "categories",
-          localField: "_id",
-          foreignField: "_id",
-          as: "category",
+          from: 'categories',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'category',
         },
       },
-      { $unwind: "$category" },
+      { $unwind: '$category' },
       {
         $project: {
-          _id: "$category._id",
-          name: "$category.name",
-          label: "$category.label",
+          _id: '$category._id',
+          name: '$category.name',
+          label: '$category.label',
         },
       },
       { $sort: { name: 1 } },
@@ -924,13 +1008,12 @@ export class AddOnService {
 
     return {
       success: true,
-      message: "Filtered categories fetched successfully",
+      message: 'Filtered categories fetched successfully',
       results: categories,
     };
   }
 
   // 📁 src/addOn/addon.service.ts
-
 
   // async getAddOnsListByVendor(vendorId: string, query: VendorQueryAddOnDto) {
   //   const {
@@ -990,7 +1073,6 @@ export class AddOnService {
   //   };
   // }
   async getAddOnsListByVendor(vendorId: string, query: VendorQueryAddOnDto) {
-
     const {
       search,
       category,
@@ -1025,13 +1107,11 @@ export class AddOnService {
     }
 
     if (city) {
-
       filter.$or = [
         { 'cityOfOperation.name': city },
         { 'pendingChanges.cityOfOperation.name': city },
       ];
     }
-
 
     if (typeof isActive === 'boolean') filter.isActive = isActive;
     if (typeof popular === 'boolean') filter.popular = popular;
@@ -1051,7 +1131,7 @@ export class AddOnService {
     // ⚙️ 3️⃣ Pagination math
     const skip = (Number(page) - 1) * Number(limit);
     const perPage = Math.max(Number(limit), 1);
-    console.log("filter in the service", filter);
+    console.log('filter in the service', filter);
     // 🧠 4️⃣ Build aggregation pipeline
     const pipeline: PipelineStage[] = [
       { $match: filter },
@@ -1063,27 +1143,35 @@ export class AddOnService {
         name: 1,
         label: 1,
       }),
-      ...lookupAndUnwind('pendingChanges.category', 'categories', 'pendingChanges.category', {
-        _id: 1,
-        name: 1,
-        label: 1,
-      }),
+      ...lookupAndUnwind(
+        'pendingChanges.category',
+        'categories',
+        'pendingChanges.category',
+        {
+          _id: 1,
+          name: 1,
+          label: 1,
+        },
+      ),
 
       // ✅ CreatedBy lookup (using helper)
       ...lookupAndUnwind('createdBy', 'vendors', 'createdBy', {
         _id: 1,
         firstName: 1,
         lastName: 1,
-
       }),
-
 
       // ✅ Merge pendingChanges and compute totals
       {
         $addFields: {
           banner: {
             $cond: [
-              { $gt: [{ $size: { $ifNull: ['$pendingChanges.banner', []] } }, 0] },
+              {
+                $gt: [
+                  { $size: { $ifNull: ['$pendingChanges.banner', []] } },
+                  0,
+                ],
+              },
               { $arrayElemAt: ['$pendingChanges.banner', 0] },
               { $arrayElemAt: ['$banner', 0] },
             ],
@@ -1093,7 +1181,16 @@ export class AddOnService {
               $ifNull: [
                 {
                   $cond: [
-                    { $gt: [{ $size: { $ifNull: ['$pendingChanges.cityOfOperation', []] } }, 0] },
+                    {
+                      $gt: [
+                        {
+                          $size: {
+                            $ifNull: ['$pendingChanges.cityOfOperation', []],
+                          },
+                        },
+                        0,
+                      ],
+                    },
                     '$pendingChanges.cityOfOperation',
                     '$cityOfOperation',
                   ],
@@ -1107,7 +1204,12 @@ export class AddOnService {
               $ifNull: [
                 {
                   $cond: [
-                    { $gt: [{ $size: { $ifNull: ['$pendingChanges.tiers', []] } }, 0] },
+                    {
+                      $gt: [
+                        { $size: { $ifNull: ['$pendingChanges.tiers', []] } },
+                        0,
+                      ],
+                    },
                     '$pendingChanges.tiers',
                     '$tiers',
                   ],
@@ -1135,7 +1237,6 @@ export class AddOnService {
             _id: 1,
             firstName: 1,
             lastName: 1,
-
           },
           banner: 1,
           exclusion: 1,
@@ -1163,7 +1264,9 @@ export class AddOnService {
     // ✅ 6️⃣ Structured `response
     return {
       success: true,
-      message: data.length ? 'Add-ons fetched successfully' : 'No add-ons found',
+      message: data.length
+        ? 'Add-ons fetched successfully'
+        : 'No add-ons found',
       results: data,
       totalResults: totalCount,
       totalPages: Math.ceil(totalCount / perPage),
@@ -1172,11 +1275,9 @@ export class AddOnService {
     };
   }
 
-
   /**
- * 🎯 Vendor: Fetch full Add-On details (with ownership + lookups)
- */
-
+   * 🎯 Vendor: Fetch full Add-On details (with ownership + lookups)
+   */
 
   async getAddOnDetailsForVendor(addOnId: string, vendorId: string) {
     // 🛡 Defensive validation (prevents cast errors)
@@ -1250,14 +1351,12 @@ export class AddOnService {
     };
   }
 
-
   async editAddOnByVendor(
     id: Types.ObjectId,
     vendorId: Types.ObjectId,
     dto: VendorEditAddOnDto,
   ): Promise<AddOnDocument> {
-
-    console.log("dto in edit ", dto);
+    console.log('dto in edit ', dto);
     const addOn = await this.addOnModel.findById(id);
     if (!addOn) throw new NotFoundException('Add-on not found');
 
@@ -1265,7 +1364,7 @@ export class AddOnService {
     if (String(addOn.createdBy) !== String(vendorId)) {
       throw new ForbiddenException('Unauthorized: You do not own this add-on');
     }
-    console.log("Editing AddOn with DTO:", dto);
+    console.log('Editing AddOn with DTO:', dto);
     // ✅ Only convert nested arrays to plain objects
     const dtoClone: any = { ...dto };
 
@@ -1282,7 +1381,6 @@ export class AddOnService {
       tiers: dtoClone.tiers,
     });
 
-
     const changedFields: Record<string, any> = {};
     const existingPending = addOn.pendingChanges || {};
 
@@ -1296,31 +1394,30 @@ export class AddOnService {
       if (key === 'cityOfOperation' && Array.isArray(newValue)) {
         const merged = this.mergeCityArrays(baseValue || [], newValue);
         if (merged.length > 0) changedFields[key] = merged;
-      }
-
-      else if (key === 'tiers' && Array.isArray(newValue)) {
+      } else if (key === 'tiers' && Array.isArray(newValue)) {
         const merged = this.mergeTierArrays(baseValue || [], newValue);
         if (merged.length > 0) changedFields[key] = merged;
-      }
-
-      else {
+      } else {
         const isEqual = JSON.stringify(baseValue) === JSON.stringify(newValue);
         if (!isEqual) changedFields[key] = newValue;
       }
     }
-
 
     if (dto.bannerToRemove?.length) {
       const bannersToRemove = dto.bannerToRemove;
 
       // Remove from pendingChanges.banner (if exists)
       if (Array.isArray(addOn.pendingChanges?.banner)) {
-        addOn.pendingChanges.banner = addOn.pendingChanges.banner.filter((url) => !bannersToRemove.includes(url));
+        addOn.pendingChanges.banner = addOn.pendingChanges.banner.filter(
+          (url) => !bannersToRemove.includes(url),
+        );
       }
 
       // Remove from main event banner (if exists)
       if (Array.isArray(addOn.banner)) {
-        addOn.banner = addOn.banner.filter((url) => !bannersToRemove.includes(url));
+        addOn.banner = addOn.banner.filter(
+          (url) => !bannersToRemove.includes(url),
+        );
       }
 
       // Delete from S3 in parallel
@@ -1330,15 +1427,17 @@ export class AddOnService {
           if (!key) return;
           try {
             await deleteImageFromS3({ key });
-
           } catch (err) {
-            console.error(`❌ Failed to delete banner: ${bannerUrl}`, err.message);
+            console.error(
+              `❌ Failed to delete banner: ${bannerUrl}`,
+              err.message,
+            );
           }
         }),
       );
     }
     if (dto.addBanner?.length) {
-      console.log("inside the add banner");
+      console.log('inside the add banner');
       changedFields['banner'] = [
         ...(changedFields.banner ?? []),
         ...(dto.addBanner ?? []),
@@ -1356,22 +1455,35 @@ export class AddOnService {
 
   // ✅ Merge logic for cities
   private mergeCityArrays(
-    oldCities: Array<{ name: string; slots: Array<{ slotType: string; maxSlotBookingsPerDay: number }> }>,
-    newCities: Array<{ name: string; slots: Array<{ slotType: string; maxSlotBookingsPerDay: number }> }>,
+    oldCities: Array<{
+      name: string;
+      slots: Array<{ slotType: string; maxSlotBookingsPerDay: number }>;
+    }>,
+    newCities: Array<{
+      name: string;
+      slots: Array<{ slotType: string; maxSlotBookingsPerDay: number }>;
+    }>,
   ) {
     console.log('🔍 Checking city differences...');
-    const changed: Array<{ name: string; slots: Array<{ slotType: string; maxSlotBookingsPerDay: number }> }> = [];
+    const changed: Array<{
+      name: string;
+      slots: Array<{ slotType: string; maxSlotBookingsPerDay: number }>;
+    }> = [];
 
     for (const newCity of newCities) {
       const oldCity = oldCities.find(
-        (c) => c.name.trim().toLowerCase() === newCity.name.trim().toLowerCase(),
+        (c) =>
+          c.name.trim().toLowerCase() === newCity.name.trim().toLowerCase(),
       );
 
       if (!oldCity) {
         changed.push(newCity); // 🆕 new city
       } else {
         // Check if slots have changed
-        const slotsChanged = this.areSlotsChanged(oldCity.slots || [], newCity.slots || []);
+        const slotsChanged = this.areSlotsChanged(
+          oldCity.slots || [],
+          newCity.slots || [],
+        );
         if (slotsChanged) {
           changed.push(newCity); // 🟠 changed city slots
         }
@@ -1390,14 +1502,16 @@ export class AddOnService {
 
     for (const newSlot of newSlots) {
       const oldSlot = oldSlots.find((s) => s.slotType === newSlot.slotType);
-      if (!oldSlot || oldSlot.maxSlotBookingsPerDay !== newSlot.maxSlotBookingsPerDay) {
+      if (
+        !oldSlot ||
+        oldSlot.maxSlotBookingsPerDay !== newSlot.maxSlotBookingsPerDay
+      ) {
         return true;
       }
     }
 
     return false;
   }
-
 
   // ✅ Merge logic for tiers
   private mergeTierArrays(
@@ -1437,7 +1551,8 @@ export class AddOnService {
 
     for (const newTier of incoming) {
       const match = existing.find(
-        (t) => t.name?.trim().toLowerCase() === newTier.name?.trim().toLowerCase(),
+        (t) =>
+          t.name?.trim().toLowerCase() === newTier.name?.trim().toLowerCase(),
       );
 
       if (!match) {
@@ -1493,7 +1608,6 @@ export class AddOnService {
     return source; // Primitive or different types
   }
 
-
   async removeBannerByAdmin(
     eventId: string,
     bannerUrl: string,
@@ -1514,7 +1628,9 @@ export class AddOnService {
 
     // --- 2️⃣ If not found, check pendingChanges.banner ---
     if (!removedFrom && event.pendingChanges?.banner?.length) {
-      const index = event.pendingChanges.banner.findIndex((url) => url === bannerUrl);
+      const index = event.pendingChanges.banner.findIndex(
+        (url) => url === bannerUrl,
+      );
       if (index !== -1) {
         event.pendingChanges.banner.splice(index, 1);
         removedFrom = 'pending';
@@ -1524,7 +1640,9 @@ export class AddOnService {
 
     // --- 3️⃣ If still not found, throw error ---
     if (!removedFrom) {
-      throw new NotFoundException('Banner not found in event or pending changes');
+      throw new NotFoundException(
+        'Banner not found in event or pending changes',
+      );
     }
 
     // --- 4️⃣ Try deleting from S3 safely ---
@@ -1538,13 +1656,11 @@ export class AddOnService {
       }
     }
 
-
     // --- 6️⃣ Save changes ---
     await event.save();
 
     return event;
   }
-
 
   async updatePendingAddOnByAdmin(
     addOnId: string,
@@ -1560,13 +1676,19 @@ export class AddOnService {
     }
 
     // Only update pendingChanges fields from DTO
-    const allowedFields = ['name', 'description', 'category', 'banner', 'tiers', 'cityOfOperation'];
+    const allowedFields = [
+      'name',
+      'description',
+      'category',
+      'banner',
+      'tiers',
+      'cityOfOperation',
+    ];
     for (const key of allowedFields) {
       if (dto[key] !== undefined) {
         addOn.pendingChanges[key] = dto[key];
       }
     }
-
 
     await this.addonHistoryService.recordHistory({
       addOnId: addOn._id,
@@ -1583,14 +1705,13 @@ export class AddOnService {
     // Optionally, set updateStatus to pending
     addOn.updateStatus = 'pending';
 
-
     await addOn.save();
 
     return addOn;
   }
 
   private formatAddOnForEdit(addOn: any) {
-    console.log("Formatting add-on for edit:", addOn);
+    console.log('Formatting add-on for edit:', addOn);
 
     return {
       _id: addOn._id,
@@ -1601,9 +1722,9 @@ export class AddOnService {
       category:
         typeof addOn.category === 'object' && addOn.category?._id
           ? {
-            _id: addOn.category._id.toString(),
-            name: addOn.category.name || '',
-          }
+              _id: addOn.category._id.toString(),
+              name: addOn.category.name || '',
+            }
           : addOn.category?.toString() || null, // fallback if only ObjectId
       tiers: addOn.tiers || [],
       tags: addOn.tags || '',
@@ -1618,7 +1739,6 @@ export class AddOnService {
       isVerify: addOn.isVerify,
     };
   }
-
 
   // addOn.service.ts
   // async getAddOnForEdit(addOnId: string, vendorId: string) {
@@ -1646,7 +1766,6 @@ export class AddOnService {
   //   // if (!addOn.isVerify && addOn.updateStatus === 'rejected') {
   //   //   const lastHistory = await this.addonHistoryService.getHistory(addOnId)
 
-
   //   //   if (!lastHistory) throw new NotFoundException('No rejected history found');
 
   //   //   // return this.formatAddOnForEdit(lastHistory.changes || lastHistory);
@@ -1658,7 +1777,7 @@ export class AddOnService {
   async getAddOnForEdit(addOnId: string, vendorId: string) {
     const addOnObjectId = new Types.ObjectId(addOnId);
     const vendorObjectId = new Types.ObjectId(vendorId);
-    console.log("Fetching add-on for edit:", { addOnId, vendorId });
+    console.log('Fetching add-on for edit:', { addOnId, vendorId });
     const pipeline: PipelineStage[] = [
       {
         $match: {
@@ -1668,7 +1787,10 @@ export class AddOnService {
       },
 
       // Join with related collections
-      ...lookupAndUnwind('category', 'categories', 'category', { name: 1, label: 1 }),
+      ...lookupAndUnwind('category', 'categories', 'category', {
+        name: 1,
+        label: 1,
+      }),
       ...lookupAndUnwind('createdBy', 'vendors', 'createdBy', {
         businessName: 1,
         email: 1,
@@ -1707,12 +1829,11 @@ export class AddOnService {
     ];
 
     let [addOn] = await this.addOnModel.aggregate(pipeline);
-    console.log("addOn fetched for edit", addOn);
+    console.log('addOn fetched for edit', addOn);
     // 🟢 CASE 1: Approved and verified
     if (addOn?.isVerify && addOn.updateStatus === 'approve') {
-      console.log("Case 1: Approved and verified data ", addOn);
+      console.log('Case 1: Approved and verified data ', addOn);
       return this.formatAddOnForEdit(addOn);
-
     }
 
     // 🟡 CASE 2: Pending verification → show pendingChanges
@@ -1726,19 +1847,23 @@ export class AddOnService {
 
     // 🔴 CASE 3: Rejected → fetch from history
     if (!addOn.isVerify && addOn.updateStatus === 'rejected') {
-      let convertIntoArray = addOnId.split(" ");
+      let convertIntoArray = addOnId.split(' ');
 
-      const lastHistory = await this.addonHistoryService.getLastRejectedChanges(convertIntoArray);
-      if (!lastHistory) throw new NotFoundException('No history found for this Add-on');
+      const lastHistory =
+        await this.addonHistoryService.getLastRejectedChanges(convertIntoArray);
+      if (!lastHistory)
+        throw new NotFoundException('No history found for this Add-on');
 
-      console.log("lastHistory:", lastHistory);
+      console.log('lastHistory:', lastHistory);
 
       // Extract the first key
       const historyKey = Object.keys(lastHistory)[0];
       const historyData = lastHistory[historyKey];
 
       if (!historyData || !historyData.lastRejectedChanges) {
-        throw new NotFoundException('Rejected changes not found for this Add-on');
+        throw new NotFoundException(
+          'Rejected changes not found for this Add-on',
+        );
       }
 
       const formatData = extractNewValues(historyData.lastRejectedChanges);
@@ -1747,52 +1872,9 @@ export class AddOnService {
       return this.formatAddOnForEdit(formatData);
     }
 
-
     // Default fallback
     return this.formatAddOnForEdit(addOn);
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   async createByVendor(dto: CreateAddOnDto & { createdBy: string }) {
     const addOn = new this.addOnModel({
@@ -1800,7 +1882,11 @@ export class AddOnService {
       registrationStatus: 'draft',
       updateStatus: 'pending',
       isVerify: false,
-      pendingChanges: { ...dto, updatedAt: new Date(), updatedBy: dto.createdBy },
+      pendingChanges: {
+        ...dto,
+        updatedAt: new Date(),
+        updatedBy: dto.createdBy,
+      },
       createdBy: dto.createdBy,
     });
     return addOn.save();
@@ -1854,24 +1940,21 @@ export class AddOnService {
     return addOn;
   }
 
-
-
   async findAll(options: any = {}) {
     const { page = 1, limit = 10, sortBy, populate, ...filter } = options;
 
     if (filter.addOns) {
-
       const addOnsArray = JSON.parse(filter.addOns);
-      console.log("addOnsArray", addOnsArray)
+      console.log('addOnsArray', addOnsArray);
       if (addOnsArray.length > 0) {
         const ids = addOnsArray.map((id) => new Types.ObjectId(id));
-        console.log("ids", ids)
+        console.log('ids', ids);
         // 🟢 Fetch categories and get their names
         const categories = await this.categoryModel.find(
           { _id: { $in: ids } }, // use ids instead of raw array
           { name: 1 }, // only fetch name field
         );
-        console.log("categories", categories)
+        console.log('categories', categories);
 
         const categoryNames = categories.map((c) => c.name);
         filter.category = { $in: categoryNames };
@@ -1895,7 +1978,6 @@ export class AddOnService {
 
     // 1️⃣ Handle addOns array filter (categories)
 
-
     if (filter.categoryId || filter.addOns) {
       try {
         // Prefer categoryId, else fallback to addOns
@@ -1918,7 +2000,6 @@ export class AddOnService {
         // if (categoryNames.length > 0) {
         //   filter.category = { $in: categoryNames };
         // }
-
       } catch (err) {
         console.warn('Invalid category/addOns filter input', err);
       }
@@ -1960,14 +2041,17 @@ export class AddOnService {
     //   delete filter.categoryId;
     // }
 
-
-    console.log("filter in listAddonsForPublic", filter);
+    console.log('filter in listAddonsForPublic', filter);
     // 2️⃣ Base addOn query
-    let query = this.addOnModel.find({
-      ...filter,
-      isActive: true,
-      isVerify: true,
-    }).select('name price banner category cityOfOperation description createdBy');
+    let query = this.addOnModel
+      .find({
+        ...filter,
+        isActive: true,
+        isVerify: true,
+      })
+      .select(
+        'name price banner category cityOfOperation description createdBy',
+      );
 
     // 3️⃣ Optional populate
     if (populate) query = query.populate(populate);
@@ -1978,22 +2062,33 @@ export class AddOnService {
     if (date) {
       const targetDate = new Date(date);
 
-      const vendorIds = [...new Set(
-        addons.map(a => a.createdBy?.toString()).filter((id): id is string => !!id)
-      )];
+      const vendorIds = [
+        ...new Set(
+          addons
+            .map((a) => a.createdBy?.toString())
+            .filter((id): id is string => !!id),
+        ),
+      ];
 
       if (vendorIds.length > 0) {
-        const vendorAvailabilities = await this.vendorAvailabilityService.getAvailabilitiesForVendors(vendorIds);
+        const vendorAvailabilities =
+          await this.vendorAvailabilityService.getAvailabilitiesForVendors(
+            vendorIds,
+          );
 
         const availabilityMap = new Map<string, any>();
-        vendorAvailabilities.forEach(avail => {
-          if (avail.vendorId) availabilityMap.set(avail.vendorId.toString(), avail);
+        vendorAvailabilities.forEach((avail) => {
+          if (avail.vendorId)
+            availabilityMap.set(avail.vendorId.toString(), avail);
         });
 
-        addons = addons.filter(addon => {
+        addons = addons.filter((addon) => {
           if (!addon.createdBy) return false;
           const availability = availabilityMap.get(addon.createdBy.toString());
-          return this.vendorAvailabilityService.isVendorAvailableOnDate(targetDate, availability);
+          return this.vendorAvailabilityService.isVendorAvailableOnDate(
+            targetDate,
+            availability,
+          );
         });
       } else {
         console.log('No vendor IDs found, skipping availability filter');
@@ -2014,7 +2109,10 @@ export class AddOnService {
     // 6️⃣ Manual pagination
     const totalDocs = addons.length;
     const startIndex = (page - 1) * limit;
-    const paginatedAddons = addons.slice(startIndex, startIndex + Number(limit));
+    const paginatedAddons = addons.slice(
+      startIndex,
+      startIndex + Number(limit),
+    );
 
     return {
       results: paginatedAddons,
@@ -2024,8 +2122,6 @@ export class AddOnService {
       limit: Number(limit),
     };
   }
-
-
 
   async activeAddOns(id: string) {
     const addOn = await this.addOnModel.findById(id);
@@ -2040,16 +2136,14 @@ export class AddOnService {
   }
 
   async getVendorPendingAddOns(vendorId: string) {
-    return this.addOnModel.find({ createdBy: vendorId, updateStatus: 'pending' });
+    return this.addOnModel.find({
+      createdBy: vendorId,
+      updateStatus: 'pending',
+    });
   }
 
-
-
-
-
-
   async deleteByAdmin(id: Types.ObjectId): Promise<AddOnDocument> {
-    console.log("addons id", id)
+    console.log('addons id', id);
     const addOn = await this.addOnModel.findOneAndUpdate(
       { _id: id, isDeleted: { $ne: true } },
       { $set: { isDeleted: true, isActive: false } },
@@ -2062,5 +2156,4 @@ export class AddOnService {
 
     return addOn;
   }
-
 }

@@ -49,7 +49,8 @@ export class CommissionService {
         query?: { tierId?: Types.ObjectId; tierName?: string },
     ) {
         const { tierId, tierName } = query || {};
-
+        console.log(type , id ,query);
+        
         const commission = await this.model.findOne(
             this.buildQuery(type, id),
         );

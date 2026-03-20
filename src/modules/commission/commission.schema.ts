@@ -104,7 +104,7 @@ export class Commission {
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Service',
+    ref: 'addons',
   })
   serviceId?: Types.ObjectId;
   @Prop({

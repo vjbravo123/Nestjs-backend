@@ -3,7 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { AdminQueryExperientialEventDto } from './dto/admin-query-experiential-event.dto'
+import { AdminQueryExperientialEventDto } from './dto/admin-query-experiential-event.dto';
 import { instanceToPlain } from 'class-transformer';
 import { isEqual, omit } from 'lodash';
 import { InjectModel } from '@nestjs/mongoose';
@@ -14,12 +14,18 @@ import {
 } from './experientialevent.schema';
 import { EventChangeHistoryService } from '../event-change-history/event-change-history.service';
 import { VendorAvailabilityService } from '../vendoravailability/vendor-availability.service';
-import { UpdateExperientialEventDto, UpdateExperientialEventByAdminDto } from './dto/update-experientialevent.dto';
+import {
+  UpdateExperientialEventDto,
+  UpdateExperientialEventByAdminDto,
+} from './dto/update-experientialevent.dto';
 import { UpdateExperientialEventByVendorDto } from './dto/update-experientialevent.dto';
-import { deleteImageFromS3, uploadImageToS3 } from "../../common/utils/s3-upload.util";
+import {
+  deleteImageFromS3,
+  uploadImageToS3,
+} from '../../common/utils/s3-upload.util';
 import { OrderService } from '../order/order.service';
 import { OrderAvailabilityService } from '../order/services/order-availability.service';
-import { extractS3KeyFromUrl } from "../../common/utils/s3-upload.util";
+import { extractS3KeyFromUrl } from '../../common/utils/s3-upload.util';
 const lookupAndUnwind = (
   localField: string,
   from: string,
@@ -40,12 +46,13 @@ const lookupAndUnwind = (
   ];
 
   if (unwind) {
-    stages.push({ $unwind: { path: `$${as}`, preserveNullAndEmptyArrays: true } });
+    stages.push({
+      $unwind: { path: `$${as}`, preserveNullAndEmptyArrays: true },
+    });
   }
 
   return stages;
 };
-
 
 @Injectable()
 export class ExperientialEventService {
@@ -56,22 +63,28 @@ export class ExperientialEventService {
     private readonly orderService: OrderService,
     private readonly orderAvailabilityService: OrderAvailabilityService,
     private readonly vendorAvailabilityService: VendorAvailabilityService,
-  ) { }
+  ) {}
 
   // ✅ Create event → save as pending for approval
   async create(dto: any, user: any): Promise<ExperientialEventDocument> {
-
-
     // Convert ObjectId fields inside pendingChanges
     const pendingChanges: any = { ...dto };
 
-    if (dto.experientialEventCategory && Types.ObjectId.isValid(dto.experientialEventCategory)) {
-      pendingChanges.experientialEventCategory = new Types.ObjectId(dto.experientialEventCategory);
+    if (
+      dto.experientialEventCategory &&
+      Types.ObjectId.isValid(dto.experientialEventCategory)
+    ) {
+      pendingChanges.experientialEventCategory = new Types.ObjectId(
+        dto.experientialEventCategory,
+      );
     }
 
     if (dto.subExperientialEventCategory) {
-      pendingChanges.subExperientialEventCategory = dto.subExperientialEventCategory
-      pendingChanges.subExperientialEventCategory = new Types.ObjectId(dto.subExperientialEventCategory);
+      pendingChanges.subExperientialEventCategory =
+        dto.subExperientialEventCategory;
+      pendingChanges.subExperientialEventCategory = new Types.ObjectId(
+        dto.subExperientialEventCategory,
+      );
       // .filter((id: string) => Types.ObjectId.isValid(id))
       // .map((id: string) => new Types.ObjectId(id));
     }
@@ -95,7 +108,6 @@ export class ExperientialEventService {
 
   // ✅ Get event by id
   async getById(eventId: string): Promise<ExperientialEventDocument> {
-
     const event = await this.experientialEventModel.findById(eventId);
     if (!event) {
       throw new NotFoundException('Experiential Event not found');
@@ -113,9 +125,20 @@ export class ExperientialEventService {
         true,
       ),
 
-      ...lookupAndUnwind('pendingChanges.experientialEventCategory', 'dropdownoptions', 'pendingChanges.experientialEventCategory', { name: 1, label: 1, value: 1 }),
+      ...lookupAndUnwind(
+        'pendingChanges.experientialEventCategory',
+        'dropdownoptions',
+        'pendingChanges.experientialEventCategory',
+        { name: 1, label: 1, value: 1 },
+      ),
 
-      ...lookupAndUnwind('pendingChanges.subExperientialEventCategory', 'subexperientialeventcategories', 'pendingChanges.subExperientialEventCategory', { name: 1 }, true),
+      ...lookupAndUnwind(
+        'pendingChanges.subExperientialEventCategory',
+        'subexperientialeventcategories',
+        'pendingChanges.subExperientialEventCategory',
+        { name: 1 },
+        true,
+      ),
       ...lookupAndUnwind(
         'subExperientialEventCategory',
         'subexperientialeventcategories',
@@ -141,15 +164,11 @@ export class ExperientialEventService {
     return jsonEvent;
   }
 
-
-
   // ✅ List with pagination & filters
-
 
   async getExperientialEventListByAdmin(
     options: AdminQueryExperientialEventDto,
   ): Promise<any> {
-
     const {
       page = 1,
       limit = 10,
@@ -195,10 +214,8 @@ export class ExperientialEventService {
 
       if (min !== undefined || max !== undefined) {
         match['tiers.price'] = {};
-        if (min !== undefined && !isNaN(min))
-          match['tiers.price'].$gte = min;
-        if (max !== undefined && !isNaN(max))
-          match['tiers.price'].$lte = max;
+        if (min !== undefined && !isNaN(min)) match['tiers.price'].$gte = min;
+        if (max !== undefined && !isNaN(max)) match['tiers.price'].$lte = max;
       }
     }
 
@@ -378,7 +395,7 @@ export class ExperientialEventService {
       { $skip: (page - 1) * limit },
       { $limit: Number(limit) },
     );
-    console.log("match data for filter evp. event", match)
+    console.log('match data for filter evp. event', match);
     // --- Execute ---
     const [events, total] = await Promise.all([
       this.experientialEventModel.aggregate(pipeline),
@@ -421,7 +438,6 @@ export class ExperientialEventService {
   //       if (max !== undefined && !isNaN(max)) match['tiers.price'].$lte = max;
   //     }
   //   }
-
 
   //   // City filter
   //   if (city) {
@@ -563,8 +579,6 @@ export class ExperientialEventService {
   //   };
   // }
 
-
-
   // ✅ Vendor submits update → goes into pendingChanges
   // async submitUpdate(
   //   eventId: string,
@@ -645,7 +659,6 @@ export class ExperientialEventService {
     return saved;
   }
 
-
   //update event  by admin
   async adminUpdateEvent(
     eventId: string,
@@ -655,7 +668,10 @@ export class ExperientialEventService {
     const event = await this.experientialEventModel.findById(eventId);
     if (!event) throw new NotFoundException('Event not found');
 
-    if (!event.pendingChanges || Object.keys(event.pendingChanges).length === 0) {
+    if (
+      !event.pendingChanges ||
+      Object.keys(event.pendingChanges).length === 0
+    ) {
       throw new BadRequestException('No pending changes to edit');
     }
 
@@ -676,14 +692,15 @@ export class ExperientialEventService {
       'subExperientialEventCategory',
       'coreActivity',
       'discount',
-    ]; 3
+    ];
+    3;
 
     for (const field of allowedFields) {
       if (!(field in pending)) continue;
       const value = updateData[field];
       if (value === undefined) continue;
-      console.log("field is ", field)
-      console.log("value is ", value)
+      console.log('field is ', field);
+      console.log('value is ', value);
       if (field === 'city') {
         const existingCities = pending.city || [];
         const updatedCities = value || [];
@@ -695,9 +712,7 @@ export class ExperientialEventService {
           ]),
         );
         pending.city = Array.from(cityMap.values());
-      }
-
-      else if (field === 'tiers') {
+      } else if (field === 'tiers') {
         const existingTiers = pending.tiers || [];
         const updatedTiers = value || [];
 
@@ -708,13 +723,9 @@ export class ExperientialEventService {
           ]),
         );
         pending.tiers = Array.from(tierMap.values());
-      }
-
-      else if (field === 'banner') {
+      } else if (field === 'banner') {
         pending.banner = value;
-      }
-
-      else {
+      } else {
         pending[field] = value;
       }
     }
@@ -725,12 +736,16 @@ export class ExperientialEventService {
 
       // Remove from pendingChanges.banner (if exists)
       if (Array.isArray(pending.banner)) {
-        pending.banner = pending.banner.filter((url) => !bannersToRemove.includes(url));
+        pending.banner = pending.banner.filter(
+          (url) => !bannersToRemove.includes(url),
+        );
       }
 
       // Remove from main event banner (if exists)
       if (Array.isArray(event.banner)) {
-        event.banner = event.banner.filter((url) => !bannersToRemove.includes(url));
+        event.banner = event.banner.filter(
+          (url) => !bannersToRemove.includes(url),
+        );
       }
 
       // Delete from S3 in parallel
@@ -740,9 +755,11 @@ export class ExperientialEventService {
           if (!key) return;
           try {
             await deleteImageFromS3({ key });
-
           } catch (err) {
-            console.error(`❌ Failed to delete banner: ${bannerUrl}`, err.message);
+            console.error(
+              `❌ Failed to delete banner: ${bannerUrl}`,
+              err.message,
+            );
           }
         }),
       );
@@ -773,7 +790,6 @@ export class ExperientialEventService {
     return event;
   }
 
-
   async approveUpdate(
     eventId: string,
     adminId: string,
@@ -791,13 +807,13 @@ export class ExperientialEventService {
       if (key === 'tiers') {
         const newTiers = Array.isArray(value)
           ? (value as Array<{
-            _id?: string | Types.ObjectId;
-            price: number;
-            name: string;
-            description: string;
-            venueSize: string;
-            features: string[];
-          }>)
+              _id?: string | Types.ObjectId;
+              price: number;
+              name: string;
+              description: string;
+              venueSize: string;
+              features: string[];
+            }>)
           : [];
 
         if (!Array.isArray(event.tiers)) event.tiers = [];
@@ -815,7 +831,10 @@ export class ExperientialEventService {
             const existing = existingTierMap.get(tier._id.toString());
             Object.assign(existing, tier);
             updated = true;
-          } else if (tier.name && existingTierMap.has(tier.name.toLowerCase())) {
+          } else if (
+            tier.name &&
+            existingTierMap.has(tier.name.toLowerCase())
+          ) {
             const existing = existingTierMap.get(tier.name.toLowerCase());
             Object.assign(existing, tier);
             updated = true;
@@ -842,20 +861,17 @@ export class ExperientialEventService {
       // 🖼 Banner merge logic (newly added)
       else if (key === 'banner') {
         // 🖼 Merge banner arrays safely (don’t replace old)
-        const newBanners = (Array.isArray(value) ? value : [])
-          .filter((b): b is string => typeof b === 'string');
+        const newBanners = (Array.isArray(value) ? value : []).filter(
+          (b): b is string => typeof b === 'string',
+        );
 
         if (!Array.isArray(event.banner)) event.banner = [];
 
         // Merge and remove duplicates (new first if needed)
-        const merged = Array.from(
-          new Set([...event.banner, ...newBanners])
-        );
+        const merged = Array.from(new Set([...event.banner, ...newBanners]));
 
         event.banner = merged;
-      }
-
-      else {
+      } else {
         (event as any)[key] = value;
       }
     }
@@ -879,20 +895,16 @@ export class ExperientialEventService {
     return saved;
   }
 
-
-
-
-
-
-
-
   // ==========================
 
   async rejectUpdate(eventId: string, reason: string, adminId: string) {
     const event = await this.experientialEventModel.findById(eventId);
     if (!event) throw new NotFoundException('Event not found');
 
-    if (!event.pendingChanges || Object.keys(event.pendingChanges).length === 0) {
+    if (
+      !event.pendingChanges ||
+      Object.keys(event.pendingChanges).length === 0
+    ) {
       throw new BadRequestException('No pending changes found');
     }
 
@@ -924,11 +936,10 @@ export class ExperientialEventService {
     };
   }
 
-
-
-
   // ✅ Get event with pending changes
-  async getWithPendingChanges(eventId: string): Promise<ExperientialEventDocument> {
+  async getWithPendingChanges(
+    eventId: string,
+  ): Promise<ExperientialEventDocument> {
     const event = await this.experientialEventModel.findById(eventId);
     if (!event) {
       throw new NotFoundException('Experiential Event not found');
@@ -971,10 +982,20 @@ export class ExperientialEventService {
       { $match: { _id: objectId } },
 
       // 🔹 Lookup for main category
-      ...lookupAndUnwind('experientialEventCategory', 'dropdownoptions', 'experientialEventCategory', { name: 1, label: 1, value: 1 }),
+      ...lookupAndUnwind(
+        'experientialEventCategory',
+        'dropdownoptions',
+        'experientialEventCategory',
+        { name: 1, label: 1, value: 1 },
+      ),
 
       // 🔹 Lookup for pending category
-      ...lookupAndUnwind('pendingChanges.experientialEventCategory', 'dropdownoptions', 'pendingChanges.experientialEventCategory', { name: 1, label: 1, value: 1 }),
+      ...lookupAndUnwind(
+        'pendingChanges.experientialEventCategory',
+        'dropdownoptions',
+        'pendingChanges.experientialEventCategory',
+        { name: 1, label: 1, value: 1 },
+      ),
 
       // 🔹 Lookup for subcategory (keep as array, no unwind)
       ...lookupAndUnwind(
@@ -982,14 +1003,28 @@ export class ExperientialEventService {
         'subexperientialeventcategories',
         'subExperientialEventCategory',
         { name: 1, value: 1 },
-        true // ✅ true means unwind = true
+        true, // ✅ true means unwind = true
       ),
       // 🔹 Lookup for pending subcategory
-      ...lookupAndUnwind('pendingChanges.subExperientialEventCategory', 'subexperientialeventcategories', 'pendingChanges.subExperientialEventCategory', { name: 1 }, true),
-      ...lookupAndUnwind('createdBy', 'vendors', 'createdBy', { name: 1, fullName: 1, email: 1 }),
-      ...lookupAndUnwind('addOns', 'categories', 'addOns', { name: 1, icon: 1 }, false),
-
-
+      ...lookupAndUnwind(
+        'pendingChanges.subExperientialEventCategory',
+        'subexperientialeventcategories',
+        'pendingChanges.subExperientialEventCategory',
+        { name: 1 },
+        true,
+      ),
+      ...lookupAndUnwind('createdBy', 'vendors', 'createdBy', {
+        name: 1,
+        fullName: 1,
+        email: 1,
+      }),
+      ...lookupAndUnwind(
+        'addOns',
+        'categories',
+        'addOns',
+        { name: 1, icon: 1 },
+        false,
+      ),
 
       // 🔹 Final projection
       {
@@ -1021,12 +1056,16 @@ export class ExperientialEventService {
 
     const result = await this.experientialEventModel.aggregate(pipeline);
     if (result[0].eventUpdateStatus == 'rejected') {
-      let getEventHistory = await this.eventChangeHistoryService.getChangeHistoryForEventByEventAndStatus(eventId, 'rejected');
-
+      let getEventHistory =
+        await this.eventChangeHistoryService.getChangeHistoryForEventByEventAndStatus(
+          eventId,
+          'rejected',
+        );
     }
-    let getEventHistory = await this.eventChangeHistoryService.getChangeHistoryForEvent(eventId);
+    let getEventHistory =
+      await this.eventChangeHistoryService.getChangeHistoryForEvent(eventId);
 
-    return { ...result[0], eventHistory: getEventHistory }
+    return { ...result[0], eventHistory: getEventHistory };
   }
   async getPublishedEvent(eventId: string) {
     const objectId = new Types.ObjectId(eventId);
@@ -1059,21 +1098,48 @@ export class ExperientialEventService {
     // };
 
     const pipeline: PipelineStage[] = [
-      { $match: { _id: objectId, isActive: true, isVerify: true, isBlocked: false } },
+      {
+        $match: {
+          _id: objectId,
+          isActive: true,
+          isVerify: true,
+          isBlocked: false,
+        },
+      },
 
       // 🔹 Lookup for main category
-      ...lookupAndUnwind('experientialEventCategory', 'dropdownoptions', 'experientialEventCategory', { name: 1, label: 1, value: 1 }),
+      ...lookupAndUnwind(
+        'experientialEventCategory',
+        'dropdownoptions',
+        'experientialEventCategory',
+        { name: 1, label: 1, value: 1 },
+      ),
 
       // 🔹 Lookup for pending category
-      ...lookupAndUnwind('pendingChanges.experientialEventCategory', 'dropdownoptions', 'pendingChanges.experientialEventCategory', { name: 1, label: 1, value: 1 }),
+      ...lookupAndUnwind(
+        'pendingChanges.experientialEventCategory',
+        'dropdownoptions',
+        'pendingChanges.experientialEventCategory',
+        { name: 1, label: 1, value: 1 },
+      ),
 
       // 🔹 Lookup for subcategory (keep as array, no unwind)
-      ...lookupAndUnwind('subExperientialEventCategory', 'subexperientialeventcategories', 'subExperientialEventCategory', { name: 1, value: 1 }, true),
+      ...lookupAndUnwind(
+        'subExperientialEventCategory',
+        'subexperientialeventcategories',
+        'subExperientialEventCategory',
+        { name: 1, value: 1 },
+        true,
+      ),
 
       // 🔹 Lookup for pending subcategory
-      ...lookupAndUnwind('pendingChanges.subExperientialEventCategory', 'subexperientialeventcategories', 'pendingChanges.subExperientialEventCategory', { name: 1 }, true),
-
-
+      ...lookupAndUnwind(
+        'pendingChanges.subExperientialEventCategory',
+        'subexperientialeventcategories',
+        'pendingChanges.subExperientialEventCategory',
+        { name: 1 },
+        true,
+      ),
 
       // 🔹 Final projection
       {
@@ -1090,7 +1156,6 @@ export class ExperientialEventService {
           discount: 1,
           isVerify: 1,
 
-
           totalBookings: 1,
           subCategory: 1,
           eventUpdateStatus: 1,
@@ -1106,16 +1171,17 @@ export class ExperientialEventService {
 
     const result = await this.experientialEventModel.aggregate(pipeline);
     if (result[0]?.eventUpdateStatus == 'rejected') {
-      let getEventHistory = await this.eventChangeHistoryService.getChangeHistoryForEventByEventAndStatus(eventId, 'rejected');
-
+      let getEventHistory =
+        await this.eventChangeHistoryService.getChangeHistoryForEventByEventAndStatus(
+          eventId,
+          'rejected',
+        );
     }
-    let getEventHistory = await this.eventChangeHistoryService.getChangeHistoryForEvent(eventId);
+    let getEventHistory =
+      await this.eventChangeHistoryService.getChangeHistoryForEvent(eventId);
 
-    return { ...result[0], eventHistory: getEventHistory }
+    return { ...result[0], eventHistory: getEventHistory };
   }
-
-
-
 
   // ✅ List all pending updates for admin
   async getPendingUpdates(options: any = {}): Promise<any> {
@@ -1144,15 +1210,15 @@ export class ExperientialEventService {
     const {
       page = 1,
       limit = 10,
-      sortBy, // supports both string & object
+      sortBy, 
       eventDate,
       city,
 
       ...filter
     } = options;
 
-    console.log("filter options:", filter);
-    console.log(" options:", options);
+    console.log('filter options:', filter);
+    console.log(' options:', options);
 
     // Base match filter: only approved experiential events
     const match: any = {
@@ -1165,9 +1231,9 @@ export class ExperientialEventService {
     if (filter.ageGroup) match.ageGroup = filter.ageGroup;
     if (filter.title) match.title = filter.title;
     if (filter.totalBookings) match.totalBookings = filter.totalBookings;
-    if (filter.isShowcaseEvent == 'true') match.isShowcaseEvent = true
+    if (filter.isShowcaseEvent == 'true') match.isShowcaseEvent = true;
     if (filter.search) {
-      const searchRegex = new RegExp(filter.search, "i");
+      const searchRegex = new RegExp(filter.search, 'i');
 
       match.$and = [
         {
@@ -1175,9 +1241,9 @@ export class ExperientialEventService {
             { title: searchRegex },
             { tags: searchRegex },
             { description: searchRegex },
-            { "city.name": searchRegex }
-          ]
-        }
+            { 'city.name': searchRegex },
+          ],
+        },
       ];
     }
     if (filter.priceRange) {
@@ -1203,15 +1269,22 @@ export class ExperientialEventService {
       }
     }
 
-
     if (city) {
-      match["city.name"] = { $in: Array.isArray(city) ? city : [city] };
+      match['city.name'] = { $in: Array.isArray(city) ? city : [city] };
     }
 
-
-
-    if (filter.experientialEventCategory) match.experientialEventCategory = new Types.ObjectId(filter.experientialEventCategory);
-    if (filter.subExperientialEventCategory) match.subExperientialEventCategory = { $in: Array.isArray(filter.subExperientialEventCategory) ? filter.subExperientialEventCategory.map((id: string) => new Types.ObjectId(id)) : [new Types.ObjectId(filter.subExperientialEventCategory)] };
+    if (filter.experientialEventCategory)
+      match.experientialEventCategory = new Types.ObjectId(
+        filter.experientialEventCategory,
+      );
+    if (filter.subExperientialEventCategory)
+      match.subExperientialEventCategory = {
+        $in: Array.isArray(filter.subExperientialEventCategory)
+          ? filter.subExperientialEventCategory.map(
+              (id: string) => new Types.ObjectId(id),
+            )
+          : [new Types.ObjectId(filter.subExperientialEventCategory)],
+      };
     // Convert eventDate to day range
     let startOfDay: Date | null = null;
     let endOfDay: Date | null = null;
@@ -1223,8 +1296,7 @@ export class ExperientialEventService {
       endOfDay.setUTCHours(23, 59, 59, 999);
     }
 
-
-    console.log("final matched data ", match)
+    console.log('final matched data ', match);
 
     // --- Aggregation pipeline ---
     const pipeline: any[] = [{ $match: match }];
@@ -1253,12 +1325,55 @@ export class ExperientialEventService {
           localField: 'subExperientialEventCategory',
           foreignField: '_id',
           as: 'subExperientialEventCategory',
-          pipeline: [{ $project: { name: 1, value: 1, experientialEventCategoryId: 1 } }],
+          pipeline: [
+            { $project: { name: 1, value: 1, experientialEventCategoryId: 1 } },
+          ],
         },
       },
       {
         $unwind: {
           path: '$subExperientialEventCategory',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+    );
+
+    // Sort handling
+    let sortStage: any = { createdAt: -1 }; // default
+    if (sortBy) {
+      if (typeof sortBy === 'string') {
+        sortStage = {};
+        sortBy.split(',').forEach((s: string) => {
+          if (s.includes(':desc')) {
+            sortStage[s.replace(':desc', '').replace('[0]', '.0').trim()] = -1;
+          } else {
+            sortStage[s.replace(':asc', '').replace('[0]', '.0').trim()] = 1;
+          }
+        });
+      } else if (typeof sortBy === 'object') {
+        sortStage = {};
+        Object.entries(sortBy).forEach(([k, v]) => {
+          sortStage[k.replace('[0]', '.0')] = v;
+        });
+      }
+    }
+
+    pipeline.push({ $sort: sortStage });
+    pipeline.push({ $skip: (page - 1) * limit });
+    pipeline.push({ $limit: Number(limit) });
+
+    pipeline.push(
+      {
+        $lookup: {
+          from: 'commissions',
+          localField: '_id',
+          foreignField: 'eventId',
+          as: 'commissionData',
+        },
+      },
+      {
+        $unwind: {
+          path: '$commissionData',
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -1271,8 +1386,45 @@ export class ExperientialEventService {
         banner: 1,
         description: 1,
         duration: 1,
-        // city: 1,
-        tiers: 1,
+        city: 1,
+        createdBy: 1,
+
+        //MAP TIERS WITH PRICING
+        tiers: {
+          $map: {
+            input: '$tiers',
+            as: 't',
+            in: {
+              $mergeObjects: [
+                '$$t',
+                {
+                  pricing: {
+                    $let: {
+                      vars: {
+                        matchedTier: {
+                          $arrayElemAt: [
+                            {
+                              $filter: {
+                                input: '$commissionData.tiers',
+                                as: 'ct',
+                                cond: { $eq: ['$$ct.tierId', '$$t._id'] },
+                              },
+                            },
+                            0,
+                          ],
+                        },
+                      },
+                      in: {
+                        userPayment: '$$matchedTier.pricing.userPayment',
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+
         tags: 1,
         isShowcaseEvent: 1,
         discount: 1,
@@ -1285,51 +1437,25 @@ export class ExperientialEventService {
       },
     });
 
-    // Sort handling
-    let sortStage: any = { createdAt: -1 }; // default
-    if (sortBy) {
-      if (typeof sortBy === "string") {
-        sortStage = {};
-        sortBy.split(",").forEach((s: string) => {
-          if (s.includes(":desc")) {
-            sortStage[s.replace(":desc", "").replace("[0]", ".0").trim()] = -1;
-          } else {
-            sortStage[s.replace(":asc", "").replace("[0]", ".0").trim()] = 1;
-          }
-        });
-      } else if (typeof sortBy === "object") {
-        sortStage = {};
-        Object.entries(sortBy).forEach(([k, v]) => {
-          sortStage[k.replace("[0]", ".0")] = v;
-        });
-      }
-    }
-
-    pipeline.push({ $sort: sortStage });
-    pipeline.push({ $skip: (page - 1) * limit });
-    pipeline.push({ $limit: Number(limit) });
-
     const events = await this.experientialEventModel.aggregate(pipeline);
 
-    let results = events.map(event => ({
+    let results = events.map((event) => ({
       ...event,
       bookingCount: 0,
-      isBookingFull: false
+      isBookingFull: false,
     }));
 
     if (eventDate && events.length) {
-
       const startOfDay = new Date(eventDate);
       startOfDay.setUTCHours(0, 0, 0, 0);
 
       const endOfDay = new Date(eventDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
 
-      const eventIds = events.map(e => e._id);
-      const vendorIds = events.map(e => e.createdBy);
+      const eventIds = events.map((e) => e._id);
+      const vendorIds = events.map((e) => e.createdBy);
 
       const [bookings, vendorAvailabilities] = await Promise.all([
-
         this.orderAvailabilityService.getBookingCountsForEvents({
           eventIds,
           city,
@@ -1337,26 +1463,24 @@ export class ExperientialEventService {
           endDate: endOfDay,
         }),
 
-        this.vendorAvailabilityService.getAvailabilitiesForVendors(vendorIds)
-
+        this.vendorAvailabilityService.getAvailabilitiesForVendors(vendorIds),
       ]);
-      console.log("bookings is a event", bookings, vendorAvailabilities)
+      console.log('bookings is a event', bookings, vendorAvailabilities);
       const bookingMap = new Map(
-        bookings.map(b => [b._id.toString(), b.bookingCount])
+        bookings.map((b) => [b._id.toString(), b.bookingCount]),
       );
 
       const vendorMap = new Map(
-        vendorAvailabilities.map(v => [v.vendorId.toString(), v])
+        vendorAvailabilities.map((v) => [v.vendorId.toString(), v]),
       );
 
-      results = events.map(event => {
-
+      results = events.map((event) => {
         const availability = vendorMap.get(event.createdBy?.toString());
 
         const vendorAvailable =
           this.vendorAvailabilityService.checkVendorAvailabilityLocal(
             availability,
-            new Date(eventDate)
+            new Date(eventDate),
           );
 
         if (!vendorAvailable) {
@@ -1364,14 +1488,14 @@ export class ExperientialEventService {
             ...event,
             bookingCount: 0,
             isBookingFull: true,
-            vendorUnavailable: true
+            vendorUnavailable: true,
           };
         }
 
         const bookingCount = bookingMap.get(event._id.toString()) || 0;
 
         const cityConfig = event.city?.find(
-          (c: any) => c.name.toLowerCase() === city?.toLowerCase()
+          (c: any) => c.name.toLowerCase() === city?.toLowerCase(),
         );
 
         const maxBookings = cityConfig?.maxBookingsPerDay || Infinity;
@@ -1380,13 +1504,13 @@ export class ExperientialEventService {
           ...event,
           bookingCount,
           isBookingFull: bookingCount >= maxBookings,
-          vendorUnavailable: false
+          vendorUnavailable: false,
         };
       });
     }
     const total = await this.experientialEventModel.countDocuments(match);
     return {
-      results,   // ✅ FIXED
+      results, 
       page: Number(page),
       limit: Number(limit),
       totalPages: Math.ceil(total / limit),
@@ -1394,19 +1518,12 @@ export class ExperientialEventService {
     };
   }
 
-
-
   async listEventsByVendor(
     vendorId: string,
     filters: any = {},
     options: any = {},
   ) {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy,
-      ...filter
-    } = options;
+    const { page = 1, limit = 10, sortBy, ...filter } = options;
 
     // --- Base filter for vendor's events ---
     const match: any = { createdBy: vendorId };
@@ -1437,11 +1554,15 @@ export class ExperientialEventService {
 
     if (filter.isShowcaseEvent == 'true') match.isShowcaseEvent = true;
     if (filter.experientialEventCategory)
-      match.experientialEventCategory = new Types.ObjectId(filter.experientialEventCategory);
+      match.experientialEventCategory = new Types.ObjectId(
+        filter.experientialEventCategory,
+      );
     if (filter.subExperientialEventCategory)
       match.subExperientialEventCategory = {
         $in: Array.isArray(filter.subExperientialEventCategory)
-          ? filter.subExperientialEventCategory.map((id: string) => new Types.ObjectId(id))
+          ? filter.subExperientialEventCategory.map(
+              (id: string) => new Types.ObjectId(id),
+            )
           : [new Types.ObjectId(filter.subExperientialEventCategory)],
       };
 
@@ -1454,9 +1575,20 @@ export class ExperientialEventService {
       unwind = true,
     ): PipelineStage[] => {
       const stages: PipelineStage[] = [
-        { $lookup: { from, localField, foreignField: '_id', as, pipeline: [{ $project: projectFields }] } },
+        {
+          $lookup: {
+            from,
+            localField,
+            foreignField: '_id',
+            as,
+            pipeline: [{ $project: projectFields }],
+          },
+        },
       ];
-      if (unwind) stages.push({ $unwind: { path: `$${as}`, preserveNullAndEmptyArrays: true } });
+      if (unwind)
+        stages.push({
+          $unwind: { path: `$${as}`, preserveNullAndEmptyArrays: true },
+        });
       return stages;
     };
 
@@ -1465,12 +1597,34 @@ export class ExperientialEventService {
       { $match: match },
 
       // Categories lookups
-      ...lookupAndUnwind('experientialEventCategory', 'dropdownoptions', 'experientialEventCategory', { name: 1, label: 1, value: 1 }),
-      ...lookupAndUnwind('pendingChanges.experientialEventCategory', 'dropdownoptions', 'pendingChanges.experientialEventCategory', { name: 1, label: 1, value: 1 }),
+      ...lookupAndUnwind(
+        'experientialEventCategory',
+        'dropdownoptions',
+        'experientialEventCategory',
+        { name: 1, label: 1, value: 1 },
+      ),
+      ...lookupAndUnwind(
+        'pendingChanges.experientialEventCategory',
+        'dropdownoptions',
+        'pendingChanges.experientialEventCategory',
+        { name: 1, label: 1, value: 1 },
+      ),
 
       // Subcategories
-      ...lookupAndUnwind('subExperientialEventCategory', 'subexperientialeventcategories', 'subExperientialEventCategory', { name: 1, value: 1 }, true),
-      ...lookupAndUnwind('pendingChanges.subExperientialEventCategory', 'subexperientialeventcategories', 'pendingChanges.subExperientialEventCategory', { name: 1 }, true),
+      ...lookupAndUnwind(
+        'subExperientialEventCategory',
+        'subexperientialeventcategories',
+        'subExperientialEventCategory',
+        { name: 1, value: 1 },
+        true,
+      ),
+      ...lookupAndUnwind(
+        'pendingChanges.subExperientialEventCategory',
+        'subexperientialeventcategories',
+        'pendingChanges.subExperientialEventCategory',
+        { name: 1 },
+        true,
+      ),
 
       // Project needed fields
       {
@@ -1504,23 +1658,29 @@ export class ExperientialEventService {
     if (sortBy) {
       if (typeof sortBy === 'string') {
         sortBy.split(',').forEach((s: string) => {
-          if (s.includes(':desc')) sortStage[s.replace(':desc', '').trim()] = -1;
+          if (s.includes(':desc'))
+            sortStage[s.replace(':desc', '').trim()] = -1;
           else sortStage[s.replace(':asc', '').trim()] = 1;
         });
       } else Object.assign(sortStage, sortBy);
     } else sortStage.createdAt = -1;
 
-    pipeline.push({ $sort: sortStage }, { $skip: (page - 1) * limit }, { $limit: Number(limit) });
+    pipeline.push(
+      { $sort: sortStage },
+      { $skip: (page - 1) * limit },
+      { $limit: Number(limit) },
+    );
 
     // --- Fetch events ---
     const events = await this.experientialEventModel.aggregate(pipeline);
     const eventIds = events.map((e: any) => e._id);
 
     // --- Fetch last rejected changes ---
-    const rejectedMap = await this.eventChangeHistoryService.getLastRejectedChanges(eventIds);
+    const rejectedMap =
+      await this.eventChangeHistoryService.getLastRejectedChanges(eventIds);
 
     // --- Merge pending/rejected changes and format ---
-    const formattedEvents = events.map(event => {
+    const formattedEvents = events.map((event) => {
       const rejected = rejectedMap[event._id.toString()] || {};
       let baseData = {
         ...event,
@@ -1531,13 +1691,29 @@ export class ExperientialEventService {
       };
 
       // Apply pending changes if event is pending
-      if (!event.isVerify && event.eventUpdateStatus === 'pending' && event.pendingChanges) {
-        baseData = { ...baseData, ...event.pendingChanges, eventUpdateStatus: 'pending' };
+      if (
+        !event.isVerify &&
+        event.eventUpdateStatus === 'pending' &&
+        event.pendingChanges
+      ) {
+        baseData = {
+          ...baseData,
+          ...event.pendingChanges,
+          eventUpdateStatus: 'pending',
+        };
       }
 
       // Apply rejected changes if event is rejected
-      if (!event.isVerify && event.eventUpdateStatus === 'rejected' && baseData.lastRejectedChanges) {
-        baseData = { ...baseData, ...baseData.lastRejectedChanges, eventUpdateStatus: 'rejected' };
+      if (
+        !event.isVerify &&
+        event.eventUpdateStatus === 'rejected' &&
+        baseData.lastRejectedChanges
+      ) {
+        baseData = {
+          ...baseData,
+          ...baseData.lastRejectedChanges,
+          eventUpdateStatus: 'rejected',
+        };
       }
 
       // Clean up helper fields
@@ -1560,8 +1736,6 @@ export class ExperientialEventService {
     };
   }
 
-
-
   // ✅ Get approved event by ID
   async getApprovedEventById(eventId: string) {
     const event = await this.experientialEventModel.findOne({
@@ -1575,11 +1749,7 @@ export class ExperientialEventService {
     return event;
   }
 
-
-
   // experiential-event.service.ts
-
-
 
   private areEqual(a: any, b: any): boolean {
     if (a instanceof Types.ObjectId && b instanceof Types.ObjectId) {
@@ -1593,13 +1763,13 @@ export class ExperientialEventService {
     updateData: Partial<UpdateExperientialEventByVendorDto>,
     updatedBy: string,
   ): Promise<ExperientialEventDocument> {
-    console.log("updateData incoming experiential ", updateData)
+    console.log('updateData incoming experiential ', updateData);
     const pending: Record<string, any> = {};
     const now = new Date();
     const updaterId = new Types.ObjectId(updatedBy);
 
     const plainUpdate = instanceToPlain(updateData);
-    console.log("plain data in edit ", plainUpdate)
+    console.log('plain data in edit ', plainUpdate);
     const hasValueChanged = (key: keyof typeof updateData): boolean =>
       updateData[key] !== undefined && !isEqual(updateData[key], event[key]);
     if (updateData.experientialEventCategory) {
@@ -1631,7 +1801,6 @@ export class ExperientialEventService {
         console.log('🟩 Subcategory unchanged — skipping');
       }
     }
-
 
     // Helper: merge pending changes safely
     const mergePendingChanges = async () => {
@@ -1685,7 +1854,9 @@ export class ExperientialEventService {
       });
 
       const oldCities = (event.city ?? []).map(normalizeCity);
-      const newCities = (Array.isArray(plainUpdate.city) ? plainUpdate.city : [plainUpdate.city]).map(normalizeCity);
+      const newCities = (
+        Array.isArray(plainUpdate.city) ? plainUpdate.city : [plainUpdate.city]
+      ).map(normalizeCity);
 
       const oldMap = new Map(oldCities.map((c) => [c.name, c]));
       const newMap = new Map(newCities.map((c) => [c.name, c]));
@@ -1764,8 +1935,7 @@ export class ExperientialEventService {
 
     // 6️⃣ Subcategory
     if (updateData.subExperientialEventCategory) {
-      const normalizeArray = (val: any) =>
-        Array.isArray(val) ? val : [val];
+      const normalizeArray = (val: any) => (Array.isArray(val) ? val : [val]);
 
       const oldSub = normalizeArray(event.subExperientialEventCategory);
       const newSub = normalizeArray(updateData.subExperientialEventCategory);
@@ -1785,7 +1955,9 @@ export class ExperientialEventService {
     const newBanners = updateData.addBanner ?? [];
 
     const finalBanners = [...keptBanners, ...newBanners];
-    const deletedBanners = existingBanners.filter((b) => !finalBanners.includes(b));
+    const deletedBanners = existingBanners.filter(
+      (b) => !finalBanners.includes(b),
+    );
 
     if (newBanners.length > 0) pending.banner = newBanners;
 
@@ -1807,7 +1979,6 @@ export class ExperientialEventService {
     await mergePendingChanges();
     return event;
   }
-
 
   async updateActive(eventId: string) {
     const event = await this.experientialEventModel.findById(eventId);
@@ -1838,14 +2009,15 @@ export class ExperientialEventService {
 
     // ===== Validate Showcase Limit Only When Enabling =====
     if (enableShowcase) {
-      const activeShowcaseCount = await this.experientialEventModel.countDocuments({
-        isShowcaseEvent: true,
-        _id: { $ne: eventId }, // avoid counting itself
-      });
+      const activeShowcaseCount =
+        await this.experientialEventModel.countDocuments({
+          isShowcaseEvent: true,
+          _id: { $ne: eventId }, // avoid counting itself
+        });
 
       if (activeShowcaseCount >= 9) {
         throw new BadRequestException(
-          'Showcase limit reached. Only 9 items are allowed.'
+          'Showcase limit reached. Only 9 items are allowed.',
         );
       }
     }
@@ -1867,10 +2039,6 @@ export class ExperientialEventService {
     };
   }
 
-
-
-
-
   async updateBlock(eventId: string) {
     const event = await this.experientialEventModel.findById(eventId);
     if (!event) {
@@ -1888,7 +2056,6 @@ export class ExperientialEventService {
     event.addOns = addOns;
     await event.save();
     return event;
-
   }
 
   async removeBannerByAdmin(
@@ -1911,7 +2078,9 @@ export class ExperientialEventService {
 
     // --- 2️⃣ If not found, check pendingChanges.banner ---
     if (!removedFrom && event.pendingChanges?.banner?.length) {
-      const index = event.pendingChanges.banner.findIndex((url) => url === bannerUrl);
+      const index = event.pendingChanges.banner.findIndex(
+        (url) => url === bannerUrl,
+      );
       if (index !== -1) {
         event.pendingChanges.banner.splice(index, 1);
         removedFrom = 'pending';
@@ -1921,7 +2090,9 @@ export class ExperientialEventService {
 
     // --- 3️⃣ If still not found, throw error ---
     if (!removedFrom) {
-      throw new NotFoundException('Banner not found in event or pending changes');
+      throw new NotFoundException(
+        'Banner not found in event or pending changes',
+      );
     }
 
     // --- 4️⃣ Try deleting from S3 safely ---
@@ -1935,15 +2106,11 @@ export class ExperientialEventService {
       }
     }
 
-
     // --- 6️⃣ Save changes ---
     await event.save();
 
     return event;
   }
-
-
-
 
   async deleteByAdmin(id: Types.ObjectId): Promise<ExperientialEventDocument> {
     const event = await this.experientialEventModel.findOneAndUpdate(
@@ -1953,10 +2120,11 @@ export class ExperientialEventService {
     );
 
     if (!event) {
-      throw new NotFoundException('Experiential event not found or already deleted');
+      throw new NotFoundException(
+        'Experiential event not found or already deleted',
+      );
     }
 
     return event;
   }
-
 }

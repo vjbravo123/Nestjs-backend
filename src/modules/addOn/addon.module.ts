@@ -7,11 +7,13 @@ import { AddOnController } from './addon.controller';
 import { OrderModule } from '../order/order.module';
 import { VendorAvailabilityModule } from '../vendoravailability/vendor-availability.module';
 import { AddOnHistoryModule } from '../addon-history/addon-history.module';
+import { Commission, CommissionSchema } from '../commission/commission.schema';
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: AddOn.name, schema: AddOnSchema },
       { name: Category.name, schema: CategorySchema }, // 👈 register Category model
+       { name: Commission.name, schema: CommissionSchema },
     ]),
     VendorAvailabilityModule,
     AddOnHistoryModule,
