@@ -114,55 +114,131 @@ export class ExperientialEventService {
     }
     return event;
   }
-  async getByIdWithAggregate(eventId: string): Promise<any> {
-    const pipeline: PipelineStage[] = [
-      { $match: { _id: new Types.ObjectId(eventId) } },
-      ...lookupAndUnwind(
-        'experientialEventCategory',
-        'dropdownoptions',
-        'experientialEventCategory',
-        { name: 1, label: 1, value: 1 },
-        true,
-      ),
+async getByIdWithAggregate(eventId: string): Promise<any> {
+  const pipeline: PipelineStage[] = [
+    { $match: { _id: new Types.ObjectId(eventId) } },
+    
+    // --- Existing Category Lookups ---
+    ...lookupAndUnwind(
+      'experientialEventCategory',
+      'dropdownoptions',
+      'experientialEventCategory',
+      { name: 1, label: 1, value: 1 },
+      true,
+    ),
 
-      ...lookupAndUnwind(
-        'pendingChanges.experientialEventCategory',
-        'dropdownoptions',
-        'pendingChanges.experientialEventCategory',
-        { name: 1, label: 1, value: 1 },
-      ),
+    ...lookupAndUnwind(
+      'pendingChanges.experientialEventCategory',
+      'dropdownoptions',
+      'pendingChanges.experientialEventCategory',
+      { name: 1, label: 1, value: 1 },
+    ),
 
-      ...lookupAndUnwind(
-        'pendingChanges.subExperientialEventCategory',
-        'subexperientialeventcategories',
-        'pendingChanges.subExperientialEventCategory',
-        { name: 1 },
-        true,
-      ),
-      ...lookupAndUnwind(
-        'subExperientialEventCategory',
-        'subexperientialeventcategories',
-        'subExperientialEventCategory',
-        { name: 1, value: 1 },
-        true,
-      ),
-    ];
+    ...lookupAndUnwind(
+      'pendingChanges.subExperientialEventCategory',
+      'subexperientialeventcategories',
+      'pendingChanges.subExperientialEventCategory',
+      { name: 1 },
+      true,
+    ),
+    ...lookupAndUnwind(
+      'subExperientialEventCategory',
+      'subexperientialeventcategories',
+      'subExperientialEventCategory',
+      { name: 1, value: 1 },
+      true,
+    ),
 
-    const results = await this.experientialEventModel.aggregate(pipeline);
+    // --- Commission Functionality ---
+    {
+      $addFields: {
+        idString: { $toString: '$_id' }
+      }
+    },
+    {
+      $lookup: {
+        from: 'commissions',
+        localField: 'idString', 
+        foreignField: 'eventId',
+        as: 'commissionData',
+      },
+    },
+    {
+      $unwind: {
+        path: '$commissionData',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $addFields: {
+        tiers: {
+          $map: {
+            input: '$tiers',
+            as: 't',
+            in: {
+              $mergeObjects: [
+                '$$t',
+                {
+                  pricingDetails: {
+                    $let: {
+                      vars: {
+                        matchedTier: {
+                          $arrayElemAt: [
+                            {
+                              $filter: {
+                                input: '$commissionData.tiers',
+                                as: 'ct',
+                                cond: { $eq: ['$$ct.tierName', '$$t.name'] },
+                              },
+                            },
+                            0,
+                          ],
+                        },
+                      },
+                      in: {
+                        // Pricing Totals
+                        userPayment: '$$matchedTier.pricing.userPayment',
+                        vendorPayout: '$$matchedTier.pricing.vendorPayout',
+                        adminProfit: '$$matchedTier.pricing.adminProfit',
+                        
+                        // Fee Breakdown
+                        platformFee: '$$matchedTier.platformFee',
+                        zappyCommission: '$$matchedTier.zappyCommission',
+                        gatewayFee: '$$matchedTier.gatewayFee',
+                        gst: '$$matchedTier.gst',
+                        additionalCharges: '$$matchedTier.additionalCharges'
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+    { 
+      $project: { 
+        idString: 0, 
+        commissionData: 0 
+      } 
+    }
+  ];
 
-    const event = results[0];
+  const results = await this.experientialEventModel.aggregate(pipeline);
+  const event = results[0];
 
-    if (!event) return null;
+  if (!event) return null;
 
-    // 🧩 Convert `_id` → `id` and stringify ObjectId
-    const jsonEvent = {
-      id: event._id?.toString(),
-      ...event,
-    };
-    delete jsonEvent._id;
+  // 🧩 Convert `_id` → `id` and stringify ObjectId
+  const jsonEvent = {
+    id: event._id?.toString(),
+    ...event,
+  };
+  delete jsonEvent._id;
 
-    return jsonEvent;
-  }
+  return jsonEvent;
+}
 
   // ✅ List with pagination & filters
 
