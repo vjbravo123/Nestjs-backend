@@ -887,7 +887,7 @@ export class AddOnService {
         return {
           ...tier,
           pricing: matchingCommTier?.pricing?.userPayment
-            ? { userPayment: matchingCommTier.pricing.userPayment } 
+            ? { userPrice: matchingCommTier.pricing.userPayment } 
             : null,
         };
       });

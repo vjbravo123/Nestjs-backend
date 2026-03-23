@@ -182,7 +182,7 @@ export class BirthdayEventService {
                         },
                       },
                       in: {
-                        userPayment: '$$matchedTier.pricing.userPayment', 
+                        userPrice: '$$matchedTier.pricing.userPayment', 
                       },
                     },
                   },
@@ -202,6 +202,7 @@ export class BirthdayEventService {
         createdAt: 1,
       },
     });
+
 
     const events = await this.birthdayEventModel.aggregate(pipeline);
 
@@ -524,13 +525,95 @@ export class BirthdayEventService {
     };
   }
 
+  // async findById(eventId: string) {
+  //   return this.birthdayEventModel.findById(eventId);
+  //   // .populate({
+  //   //   path: 'addOns',
+  //   //   select: 'name description price duration maxQuantity isActive banner popular category'
+  //   // });
+  // }
   async findById(eventId: string) {
-    return this.birthdayEventModel.findById(eventId);
-    // .populate({
-    //   path: 'addOns',
-    //   select: 'name description price duration maxQuantity isActive banner popular category'
-    // });
-  }
+  const pipeline: any[] = [
+    { 
+      // 1. Find the specific document by ID
+      $match: { _id: new Types.ObjectId(eventId) } 
+    },
+    {
+      // 2. JOIN WITH COMMISSION
+      $lookup: {
+        from: 'commissions',
+        localField: '_id',
+        foreignField: 'eventId',
+        as: 'commissionData',
+      },
+    },
+    {
+      // 3. Flatten the commission array
+      $unwind: {
+        path: '$commissionData',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      // 4. Transform the data and inject pricing into tiers
+      $project: {
+        title: 1,
+        banner: 1,
+        ageGroup: 1,
+        duration: 1,
+        city: 1,
+        tags: 1,
+        discount: 1,
+        exclusion: 1,
+        isShowcaseEvent: 1,
+        delight: 1,
+        description: 1,
+        totalBookings: 1,
+        subCategory: 1,
+        createdAt: 1,
+        addOns: 1, 
+        tiers: {
+          $map: {
+            input: '$tiers',
+            as: 't',
+            in: {
+              $mergeObjects: [
+                '$$t',
+                {
+                  pricing: {
+                    $let: {
+                      vars: {
+                        matchedTier: {
+                          $arrayElemAt: [
+                            {
+                              $filter: {
+                                input: '$commissionData.tiers',
+                                as: 'ct',
+                                cond: { $eq: ['$$ct.tierId', '$$t._id'] },
+                              },
+                            },
+                            0,
+                          ],
+                        },
+                      },
+                      in: {
+                        userPayment: '$$matchedTier.pricing.userPayment', 
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+  ];
+
+  const results = await this.birthdayEventModel.aggregate(pipeline);
+
+  return results.length > 0 ? results[0] : null;
+}
   async update(
     eventId: string,
     dto: UpdateBirthdayEventDto,

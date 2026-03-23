@@ -1415,7 +1415,7 @@ export class ExperientialEventService {
                         },
                       },
                       in: {
-                        userPayment: '$$matchedTier.pricing.userPayment',
+                        userPrice: '$$matchedTier.pricing.userPayment',
                       },
                     },
                   },
