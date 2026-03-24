@@ -118,7 +118,7 @@ async getByIdWithAggregate(eventId: string): Promise<any> {
   const pipeline: PipelineStage[] = [
     { $match: { _id: new Types.ObjectId(eventId) } },
     
-    // --- Existing Category Lookups ---
+    // --- Category Lookups ---
     ...lookupAndUnwind(
       'experientialEventCategory',
       'dropdownoptions',
@@ -230,7 +230,7 @@ async getByIdWithAggregate(eventId: string): Promise<any> {
 
   if (!event) return null;
 
-  // 🧩 Convert `_id` → `id` and stringify ObjectId
+  // Convert `_id` → `id` and stringify ObjectId
   const jsonEvent = {
     id: event._id?.toString(),
     ...event,

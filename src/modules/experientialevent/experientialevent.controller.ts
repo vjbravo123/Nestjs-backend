@@ -224,17 +224,36 @@ export class ExperientialEventController {
     }
 
     // 🔹 Admin: view complete event (approved + pending)
-    @Get(':eventId/complete')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('admin')
-    async getCompleteEvent(@Param('eventId') eventId: string) {
+@Get(':eventId/complete')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
+async getCompleteEvent(@Param('eventId') eventId: string) {
 
-        const event = await this.experientialEventService.getEventWithPendingChanges(eventId);
+    const event = await this.experientialEventService.getEventWithPendingChanges(eventId);
 
-        if (!event) throw new NotFoundException('Event not found');
+    if (!event) throw new NotFoundException('Event not found');
 
-        return event
+    // 1. Convert Mongoose document to a plain JavaScript object
+    const eventObj = event.toObject ? event.toObject() : event;
+
+    const discountPercentage = eventObj.discount || 0;
+
+    // 2. Map through tiers to add the discountedPrice field
+    if (eventObj.tiers && Array.isArray(eventObj.tiers)) {
+        eventObj.tiers = eventObj.tiers.map(tier => {
+            const price = tier.price || 0;
+            const discountAmount = (price * discountPercentage) / 100;
+            
+            return {
+                ...tier,
+                // Calculate discounted price and fix to 2 decimal places
+                discountedPrice: Number((price - discountAmount).toFixed(2))
+            };
+        });
     }
+
+    return eventObj;
+}
     @Get(':eventId/public')
     // @UseGuards(JwtAuthGuard, RolesGuard)
     // @Roles('admin')
