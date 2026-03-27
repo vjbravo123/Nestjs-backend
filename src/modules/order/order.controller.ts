@@ -92,7 +92,7 @@ export class OrderController {
     @Param('checkoutId', MongoIdPipe) checkoutId: Types.ObjectId,
     @CurrentUser() { userId }: AuthUser,
   ) {
-    // console.log(userId)
+    console.log(userId , checkoutId)
     return this.orderQueryService.getUserOrdersByCheckoutId(checkoutId, userId!);
   }
 

@@ -51,6 +51,7 @@ import {
 import { VendorBookingService } from './vendor-bookings/vendor-booking.service';
 import { VendorBookingController } from './vendor-bookings/vendor-booking.controller';
 import { InstallmentModule } from '../installments/installment.module';
+import { VendorTrackingModule } from './vendor-tracking/vendor-tracking.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { InstallmentModule } from '../installments/installment.module';
     VendorAvailabilityModule,
     CheckoutModule,
     forwardRef(() => AddOnModule),
+    VendorTrackingModule,
   ],
 
   controllers: [
