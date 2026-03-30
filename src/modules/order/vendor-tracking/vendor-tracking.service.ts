@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { VendorBooking, VendorBookingDocument } from '../vendor-bookings/vendor-booking.schema';
 import { User, UserDocument } from '../../users/users.schema';
 import { uploadImageToS3 } from '../../../common/utils/s3-upload.util';
+import { Order, OrderDocument } from '../order.schema';
 import Redis from 'ioredis';
 
 interface ITracking {
@@ -19,6 +20,7 @@ export class VendorTrackingService {
   constructor(
     @InjectModel(VendorBooking.name) private bookingModel: Model<VendorBookingDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     @Inject('REDIS_CLIENT') private readonly redisClient: Redis,
   ) {}
 
@@ -117,5 +119,34 @@ export class VendorTrackingService {
       { $set: updateData },
       { new: true }
     );
+  }
+
+  /**
+   * STEP EXTRA: Get location coordinates
+   */
+  async getOrderLocation(bookingId: string, vendorId: string) {
+
+    const booking = await this.bookingModel.findOne({
+      _id: new Types.ObjectId(bookingId),
+      vendorId: new Types.ObjectId(vendorId)
+    });
+
+    if (!booking) {
+      throw new HttpException('Booking not found', HttpStatus.NOT_FOUND);
+    }
+
+    const order = await this.orderModel.findById(booking.orderId);
+
+    if (!order || !order.addressDetails) {
+      throw new HttpException('Location not found', HttpStatus.NOT_FOUND);
+    }
+
+    return {
+      latitude: order.addressDetails.latitude,
+      longitude: order.addressDetails.longitude,
+      address: order.addressDetails.address,
+      city: order.addressDetails.city,
+      state: order.addressDetails.state
+    };
   }
 }

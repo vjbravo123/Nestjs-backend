@@ -4,12 +4,14 @@ import { VendorTrackingController } from './vendor-tracking.controller';
 import { VendorTrackingService } from './vendor-tracking.service';
 import { VendorBooking, VendorBookingSchema } from '../vendor-bookings/vendor-booking.schema';
 import { User, UserSchema } from '../../users/users.schema';
+import { Order, OrderSchema } from '../order.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: VendorBooking.name, schema: VendorBookingSchema },
       { name: User.name, schema: UserSchema },
+       { name: Order.name, schema: OrderSchema },
     ]),
   ],
   controllers: [VendorTrackingController],

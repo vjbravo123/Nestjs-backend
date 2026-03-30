@@ -1,10 +1,20 @@
-import { Controller,Get,Post,Body,Param,UseInterceptors,UploadedFiles,Req,UseGuards} from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseInterceptors,
+  UploadedFiles,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { VendorTrackingService } from './vendor-tracking.service';
 import { VerifyOtpDto } from './dto/tracking-request.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
-@UseGuards(JwtAuthGuard) 
+@UseGuards(JwtAuthGuard)
 @Controller('vendor/tracking')
 export class VendorTrackingController {
   constructor(private readonly trackingService: VendorTrackingService) {}
@@ -35,11 +45,16 @@ export class VendorTrackingController {
   @Post(':bookingId/upload-arrival')
   @UseInterceptors(FilesInterceptor('images'))
   uploadArrival(
-    @Param('bookingId') bookingId: string, 
-    @UploadedFiles() files: Express.Multer.File[], 
-    @Req() req: any
+    @Param('bookingId') bookingId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: any,
   ) {
-    return this.trackingService.uploadPhotos(bookingId, req.user.vendorId, files, 'arrival');
+    return this.trackingService.uploadPhotos(
+      bookingId,
+      req.user.vendorId,
+      files,
+      'arrival',
+    );
   }
 
   /**
@@ -56,8 +71,17 @@ export class VendorTrackingController {
    * Validates Start-OTP. Moves booking status to 'in_progress'.
    */
   @Post(':bookingId/verify-start')
-  verifyStart(@Param('bookingId') bookingId: string, @Body() dto: VerifyOtpDto, @Req() req: any) {
-    return this.trackingService.verifyOtp(bookingId, req.user.vendorId, dto.otp, true);
+  verifyStart(
+    @Param('bookingId') bookingId: string,
+    @Body() dto: VerifyOtpDto,
+    @Req() req: any,
+  ) {
+    return this.trackingService.verifyOtp(
+      bookingId,
+      req.user.vendorId,
+      dto.otp,
+      true,
+    );
   }
 
   /**
@@ -67,11 +91,16 @@ export class VendorTrackingController {
   @Post(':bookingId/upload-completion')
   @UseInterceptors(FilesInterceptor('images'))
   uploadEnd(
-    @Param('bookingId') bookingId: string, 
-    @UploadedFiles() files: Express.Multer.File[], 
-    @Req() req: any
+    @Param('bookingId') bookingId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: any,
   ) {
-    return this.trackingService.uploadPhotos(bookingId, req.user.vendorId, files, 'completion');
+    return this.trackingService.uploadPhotos(
+      bookingId,
+      req.user.vendorId,
+      files,
+      'completion',
+    );
   }
 
   /**
@@ -79,7 +108,24 @@ export class VendorTrackingController {
    * Validates End-OTP. Moves booking status to 'completed'.
    */
   @Post(':bookingId/verify-end')
-  verifyEnd(@Param('bookingId') bookingId: string, @Body() dto: VerifyOtpDto, @Req() req: any) {
-    return this.trackingService.verifyOtp(bookingId, req.user.vendorId, dto.otp, false);
+  verifyEnd(
+    @Param('bookingId') bookingId: string,
+    @Body() dto: VerifyOtpDto,
+    @Req() req: any,
+  ) {
+    return this.trackingService.verifyOtp(
+      bookingId,
+      req.user.vendorId,
+      dto.otp,
+      false,
+    );
+  }
+
+  /**
+   * EXTRA STEP: Get event location coordinates
+   */
+  @Get(':bookingId/location')
+  getLocation(@Param('bookingId') bookingId: string, @Req() req: any) {
+    return this.trackingService.getOrderLocation(bookingId, req.user.vendorId);
   }
 }
