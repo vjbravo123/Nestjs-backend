@@ -51,6 +51,9 @@ import { WorkerModule } from './workers/worker.module';
 import { HealthController } from './common/controllers/health.controller';
 import { CaslModule } from './common/casl/casl.module';
 import { CommissionModule } from './modules/commission/commission.module'
+import { VenueController } from './modules/venue/venue.controller';
+import { VenueService } from './modules/venue/venue.service';
+import { VenueModule } from './modules/venue/venue.module';
 @Module({
   imports: [
     MongooseModule.forRoot(config.mongodbUrl),
@@ -107,7 +110,8 @@ import { CommissionModule } from './modules/commission/commission.module'
     EmailModule,
     ContactUsModule,
     WhatsAppModule,
-    WorkerModule, //  Queue processors
+    WorkerModule,
+    VenueModule, //  Queue processors
   ],
   controllers: [AppController, HealthController],
   providers: [
@@ -117,6 +121,7 @@ import { CommissionModule } from './modules/commission/commission.module'
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+  
   ],
 })
 export class AppModule implements NestModule {
