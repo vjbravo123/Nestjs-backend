@@ -8,6 +8,7 @@ import { Order, OrderDocument } from '../order.schema';
 import Redis from 'ioredis';
 
 interface ITracking {
+   status?: string;
   arrivedAt?: Date;
   arrivalPhotos?: string[];
   startedAt?: Date;
@@ -35,11 +36,12 @@ export class VendorTrackingService {
     let step = "ARRIVED_BTN";
     const tracking: ITracking = booking.tracking || {};
 
+    // Logic updated to check tracking.status instead of booking.status
     if (tracking.arrivedAt) step = "UPLOAD_ARRIVAL";
     if (tracking.arrivalPhotos && tracking.arrivalPhotos.length > 0) step = "START_OTP";
-    if (booking.status === 'in_progress') step = "LIVE";
-    if (booking.status === 'in_progress' && tracking.completionPhotos && tracking.completionPhotos.length > 0) step = "END_OTP";
-    if (booking.status === 'completed') step = "COMPLETED";
+    if (tracking.status === 'in_progress') step = "LIVE";
+    if (tracking.status === 'in_progress' && tracking.completionPhotos && tracking.completionPhotos.length > 0) step = "END_OTP";
+    if (tracking.status === 'completed') step = "COMPLETED";
 
     return { step, booking };
   }
@@ -100,7 +102,7 @@ export class VendorTrackingService {
     return { message: 'Verification code sent to client' };
   }
 
-  async verifyOtp(bookingId: string, vendorId: string, otp: string, isStart: boolean) {
+   async verifyOtp(bookingId: string, vendorId: string, otp: string, isStart: boolean) {
     const storedOtp = await this.redisClient.get(`TRACKING_OTP:${bookingId}`);
     
     if (!storedOtp || storedOtp !== otp) {
@@ -109,10 +111,10 @@ export class VendorTrackingService {
 
     await this.redisClient.del(`TRACKING_OTP:${bookingId}`);
 
-    // Use Record<string, any> to allow nested dot notation keys like 'tracking.startedAt'
+    // Logic updated: use 'tracking.status' instead of 'status'
     const updateData: Record<string, any> = isStart 
-      ? { status: 'in_progress', 'tracking.startedAt': new Date() }
-      : { status: 'completed', 'tracking.completedAt': new Date() };
+      ? { 'tracking.status': 'in_progress', 'tracking.startedAt': new Date() }
+      : { 'tracking.status': 'completed', 'tracking.completedAt': new Date() };
 
     return this.bookingModel.findOneAndUpdate(
       { _id: new Types.ObjectId(bookingId), vendorId: new Types.ObjectId(vendorId) },

@@ -58,6 +58,7 @@ export class VendorBooking {
   // Vendor tracking object
   @Prop({
     type: {
+      status: String,
       arrivedAt: Date,
       arrivalPhotos: [String],
       startedAt: Date,
@@ -67,6 +68,7 @@ export class VendorBooking {
     _id: false,
   })
   tracking?: {
+    status?: string;
     arrivedAt?: Date;
     arrivalPhotos?: string[];
     startedAt?: Date;
