@@ -16,20 +16,51 @@ export class VenueService {
   ) {}
 
   async create(createVenueDto: CreateVenueDto,files: Array<Express.Multer.File>,): Promise<Venue> {
-    // Upload images then store resulting URLs alongside the venue data
-    const imageUrls = await uploadVenueImages( files, createVenueDto.name.replace(/\s+/g, '-'), );
+  const imageUrls = await uploadVenueImages(files,createVenueDto.name.replace(/\s+/g, '-'),);
+  const createdVenue = new this.venueModel({...createVenueDto,images: imageUrls, });
+  return createdVenue.save();
+}
 
-    const createdVenue = new this.venueModel({
-      ...createVenueDto,
-      images: imageUrls,
-    });
+  // async findAll(): Promise<Venue[]> {
+  //   return this.venueModel.find().exec();
+  // }
+  async findAll(query: any = {}): Promise<any> {
+  const {
+    page = 1,
+    limit = 10,
+    search,
+    type,
+  } = query;
 
-    return createdVenue.save();
+  const match: any = { isDeleted: false };
+
+  if (type) match.type = type;
+
+  if (search) {
+    const regex = new RegExp(search, 'i');
+    match.$or = [
+      { name: regex },
+      { city: regex },
+      { address: regex },
+      { type: regex },
+    ];
   }
 
-  async findAll(): Promise<Venue[]> {
-    return this.venueModel.find().exec();
-  }
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [data, total] = await Promise.all([
+    this.venueModel.find(match).skip(skip).limit(Number(limit)).exec(),
+    this.venueModel.countDocuments(match),
+  ]);
+
+  return {
+    data,
+    page: Number(page),
+    limit: Number(limit),
+    totalPages: Math.ceil(total / Number(limit)),
+    totalResults: total,
+  };
+}
 
   async findOne(id: string): Promise<Venue> {
     const venue = await this.venueModel.findById(id).exec();
@@ -57,17 +88,19 @@ export class VenueService {
     // Remove the helper field before persisting
     delete formattedData.existingImages;
 
-    const updatedVenue = await this.venueModel
-      .findByIdAndUpdate(
-        id,
-        { $set: formattedData },
-        { new: true, runValidators: true },
-      )
-      .exec();
+    const updatedVenue = await this.venueModel.findByIdAndUpdate(id,{ $set: formattedData },{ new: true, runValidators: true },).exec();
 
     if (!updatedVenue) throw new NotFoundException('Venue not found');
     return updatedVenue;
   }
+
+  async toggleActive(id: string): Promise<Venue> {
+  const venue = await this.venueModel.findById(id).exec();
+  if (!venue) throw new NotFoundException('Venue not found');
+
+  venue.isActive = !venue.isActive;
+  return venue.save();
+}
 
   async remove(id: string): Promise<any> {
     const result = await this.venueModel.findByIdAndDelete(id).exec();

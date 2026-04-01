@@ -9,6 +9,7 @@ import {
   UploadedFiles,
   UseInterceptors,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { VenueService } from './venue.service';
 import { CreateVenueDto } from './create-venue.dto';
@@ -34,10 +35,14 @@ export class VenueController {
   }
 
   // Return all venues
+  // @Get()
+  // findAll() {
+  //   return this.venueService.findAll();
+  // }
   @Get()
-  findAll() {
-    return this.venueService.findAll();
-  }
+findAll(@Query() query: any) {
+  return this.venueService.findAll(query);
+}
 
   // Return a single venue by ID
   @Get(':id')
@@ -57,6 +62,14 @@ export class VenueController {
   ) {
     return this.venueService.update(id, updateVenueDto, files);
   }
+
+  // Toggle active status for a venue
+@Patch(':id/active')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'vendor')
+toggleActive(@Param('id') id: string) {
+  return this.venueService.toggleActive(id);
+}
 
   // Delete a venue by ID (admin only)
   @Delete(':id')
