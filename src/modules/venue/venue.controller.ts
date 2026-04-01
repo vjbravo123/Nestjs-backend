@@ -25,7 +25,7 @@ export class VenueController {
   // Create a new venue — uploads images to S3 (with fallback), then saves to DB
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'vendor')
+  @Roles('admin')
   @UseInterceptors(FilesInterceptor('images'))
   async create(
     @Body() createVenueDto: CreateVenueDto,

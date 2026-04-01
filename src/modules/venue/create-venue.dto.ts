@@ -1,185 +1,63 @@
-import {
-  IsString,
-  IsNumber,
-  IsBoolean,
-  IsArray,
-  IsOptional,
-  ValidateNested
-} from 'class-validator';
+import { IsString, IsNumber, IsBoolean, IsArray, ValidateNested } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 /* -------------------- nested DTOs -------------------- */
 
-class PricingTierDto {
-
-  @IsString()
-  tierName: string;
-
-  @Type(() => Number)
-  @IsNumber()
-  pricePerPlate: number;
-
-  @Type(() => Number)
-  @IsNumber()
-  minGuests: number;
-
-  @IsArray()
-  @IsString({ each: true })
-  includes: string[];
+class PricingTierDto{
+  @IsString() tierName:string;
+  @Type(()=>Number) @IsNumber() pricePerPlate:number;
+  @Type(()=>Number) @IsNumber() minGuests:number;
+  @IsArray() @IsString({each:true}) includes:string[];
 }
 
-class VenueAreaDto {
-
-  @IsString()
-  areaName: string;
-
-  @IsString()
-  spaceType: string;
-
-  @Type(() => Number)
-  @IsNumber()
-  seating: number;
-
+class VenueAreaDto{
+  @IsString() areaName:string;
+  @IsString() spaceType:string;
+  @Type(()=>Number) @IsNumber() seating:number;
 }
 
-class VenuePolicyDto {
-
-  @IsString()
-  type: string;
-
-  @IsString()
-  value: string;
-
-  @IsString()
-  description: string;
+class VenuePolicyDto{
+  @IsString() type:string;
+  @IsString() value:string;
+  @IsString() description:string;
 }
-
 
 /* -------------------- main DTO -------------------- */
 
-export class CreateVenueDto {
+export class CreateVenueDto{
 
   /* ---------- Basic Info ---------- */
 
-  @IsString()
-  name: string;
-
-  @IsOptional()
-  @IsString()
-  type: string;
-
-  @IsOptional()
-  @IsString()
-  city: string;
-
-  @IsOptional()
-  @IsString()
-  address: string;
-
-  @IsOptional()
-  @IsString()
-  description: string;
-
-  @IsOptional()
-  @IsString()
-  mapUrl: string;
-
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
-  isActive: boolean;
-
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
-  isVerified: boolean;
-
+  @IsString() name:string;
+  @IsString() type:string;
+  @IsString() city:string;
+  @IsString() address:string;
+  @IsString() description:string;
+  @IsString() mapUrl:string;
+  @Transform(({value})=>value==='true'||value===true) @IsBoolean() isActive:boolean;
 
   /* ---------- Capacity & Pricing ---------- */
 
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  capacityMin: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  capacityMax: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  startingRentalPrice: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  roomCount: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  roomPrice: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  yearStarted: number;
-
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
-  allowsSmallParties: boolean;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  destinationPackagePrice: number;
-
-  @IsOptional()
-  @IsString()
-  destinationPackageDescription: string;
-
+  @Type(()=>Number) @IsNumber() capacityMin:number;
+  @Type(()=>Number) @IsNumber() capacityMax:number;
+  @Type(()=>Number) @IsNumber() startingRentalPrice:number;
+  @Type(()=>Number) @IsNumber() roomCount:number;
+  @Type(()=>Number) @IsNumber() roomPrice:number;
+  @Type(()=>Number) @IsNumber() yearStarted:number;
+  @Transform(({value})=>value==='true'||value===true) @IsBoolean() allowsSmallParties:boolean;
+  @Type(()=>Number) @IsNumber() destinationPackagePrice:number;
+  @IsString() destinationPackageDescription:string;
 
   /* ---------- Nested Arrays ---------- */
 
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PricingTierDto)
-  pricingTiers: PricingTierDto[];
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => VenueAreaDto)
-  areas: VenueAreaDto[];
-
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => VenuePolicyDto)
-  policies: VenuePolicyDto[];
-
+  @IsArray() @ValidateNested({each:true}) @Type(()=>PricingTierDto) pricingTiers:PricingTierDto[];
+  @IsArray() @ValidateNested({each:true}) @Type(()=>VenueAreaDto) areas:VenueAreaDto[];
+  @IsArray() @ValidateNested({each:true}) @Type(()=>VenuePolicyDto) policies:VenuePolicyDto[];
 
   /* ---------- Media & Contact ---------- */
 
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  images: string[];
-
-  @IsOptional()
-  @IsString()
-  contactPhone: string;
-
-  @IsOptional()
-  @IsString()
-  contactEmail: string;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  amenities: string[];
+  @IsArray() @IsString({each:true}) images:string[];
+  @IsString() contactPhone:string;
+  @IsString() contactEmail:string;
+  @IsArray() @IsString({each:true}) amenities:string[];
 }
