@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsBoolean, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsBoolean, IsArray, ValidateNested, IsOptional } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 /* -------------------- nested DTOs -------------------- */
@@ -56,7 +56,8 @@ export class CreateVenueDto{
 
   /* ---------- Media & Contact ---------- */
 
-  @IsArray() @IsString({each:true}) images:string[];
+  @IsOptional()
+  images: any[];
   @IsString() contactPhone:string;
   @IsString() contactEmail:string;
   @IsArray() @IsString({each:true}) amenities:string[];

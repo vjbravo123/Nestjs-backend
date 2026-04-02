@@ -24,32 +24,53 @@ export class VenueService {
   // async findAll(): Promise<Venue[]> {
   //   return this.venueModel.find().exec();
   // }
-  async findAll(query: any = {}): Promise<any> {
+ async findAll(query: any = {}): Promise<any> {
   const {
     page = 1,
     limit = 10,
     search,
     type,
+    city,
+    minGuests,
+    maxBudget,
+    sortBy,
   } = query;
 
   const match: any = { isDeleted: false };
 
-  if (type) match.type = type;
-
+  if (type && type !== 'all') match.type = type;
+  if (city && city !== 'all') match.city = new RegExp(city, 'i');
+  
+  // Search logic
   if (search) {
     const regex = new RegExp(search, 'i');
     match.$or = [
       { name: regex },
       { city: regex },
       { address: regex },
-      { type: regex },
     ];
+  }
+
+  // Filter by Capacity
+  if (minGuests) {
+    match.capacityMax = { $gte: Number(minGuests) };
+  }
+
+  // Filter by Budget (Checking any tier price <= maxBudget)
+  if (maxBudget) {
+    match['pricingTiers.pricePerPlate'] = { $lte: Number(maxBudget) };
   }
 
   const skip = (Number(page) - 1) * Number(limit);
 
+  // Sorting logic
+  let sortOptions: any = { createdAt: -1 };
+  if (sortBy === 'price_low') sortOptions = { 'pricingTiers.0.pricePerPlate': 1 };
+  if (sortBy === 'price_high') sortOptions = { 'pricingTiers.0.pricePerPlate': -1 };
+  if (sortBy === 'rating') sortOptions = { rating: -1 };
+
   const [data, total] = await Promise.all([
-    this.venueModel.find(match).skip(skip).limit(Number(limit)).exec(),
+    this.venueModel.find(match).sort(sortOptions).skip(skip).limit(Number(limit)).exec(),
     this.venueModel.countDocuments(match),
   ]);
 
