@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Model } from 'mongoose';
+import { paginate } from 'src/common/utils/paginate.plugin';
 
 @Schema()
 class PricingTier {
@@ -12,16 +13,18 @@ class PricingTier {
 @Schema()
 class VenueArea {
   @Prop() areaName: string;
-  @Prop() spaceType: string; // indoor, outdoor, ballroom, etc.
+  @Prop() spaceType: string;
   @Prop() seating: number;
+  @Prop({ type: [String], default: [] }) images: string[];
 }
 
 @Schema()
 class VenuePolicy {
-  @Prop() type: string; // Catering, Decor, DJ, etc.
+  @Prop() type: string;
   @Prop() value: string;
   @Prop() description: string;
 }
+
 
 export type VenueDocument = Venue & Document;
 
@@ -35,9 +38,7 @@ export class Venue {
   @Prop() description: string;
   @Prop() mapUrl: string;
   @Prop({ default: true }) isActive: boolean;
-  @Prop({ default: false }) isVerified: boolean;
   @Prop({ default: false }) isDeleted: boolean;
-
 
   // Capacity & Pricing Info
   @Prop() capacityMin: number;
@@ -53,7 +54,10 @@ export class Venue {
   // Nested Arrays
   @Prop({ type: [SchemaFactory.createForClass(PricingTier)] })
   pricingTiers: PricingTier[];
-  @Prop({ type: [SchemaFactory.createForClass(VenueArea)] }) areas: VenueArea[];
+
+  @Prop({ type: [SchemaFactory.createForClass(VenueArea)] })
+  areas: VenueArea[];
+
   @Prop({ type: [SchemaFactory.createForClass(VenuePolicy)] })
   policies: VenuePolicy[];
 
@@ -62,11 +66,13 @@ export class Venue {
   @Prop() contactPhone: string;
   @Prop() contactEmail: string;
   @Prop({ type: [String] }) amenities: string[];
-
-
-
 }
 
+
+export interface VenueModel extends Model<VenueDocument> {
+  paginate(filter?: object, options?: object): Promise<any>;
+}
+
+
 export const VenueSchema = SchemaFactory.createForClass(Venue);
-
-
+VenueSchema.plugin(paginate);
