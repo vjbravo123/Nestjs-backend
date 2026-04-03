@@ -5,14 +5,14 @@ import { Types } from 'mongoose';
 import { Venue, VenueModel } from './venue.schema';
 import { CreateVenueDto } from './create-venue.dto';
 import { VenueQueryDto } from './venue-query.dto';
-import {
-  USER_SELECT,
-  uploadVenueImages,
-  uploadAreaImages,
-  bulkDeleteFromS3,
-  safeParse,
-  parseExistingImages,
-} from '../../common/utils/venue-image.util';
+import { uploadImageToS3, deleteImageFromS3, extractS3KeyFromUrl } from '../../common/utils/s3-upload.util';
+
+const USER_SELECT =
+  'name type city address description mapUrl isActive ' +
+  'capacityMin capacityMax startingRentalPrice roomCount roomPrice ' +
+  'yearStarted allowsSmallParties destinationPackagePrice ' +
+  'destinationPackageDescription pricingTiers areas policies ' +
+  'images contactPhone contactEmail amenities';
 
 @Injectable()
 export class VenueService {
@@ -27,23 +27,44 @@ export class VenueService {
       throw new BadRequestException('Max capacity cannot be less than Min capacity');
 
     const keyPrefix = createVenueDto.name.replace(/\s+/g, '-');
-    const imageUrls = await uploadVenueImages(files.filter((f) => f.fieldname === 'images'), keyPrefix);
 
-    const rawAreas: any[] = safeParse(createVenueDto.areas as any) ?? [];
+    const imageUrls = await Promise.all(
+      files
+        .filter((f) => f.fieldname === 'images')
+        .map((file, index) =>
+          uploadImageToS3({
+            fileBuffer: file.buffer,
+            key: `venues/${keyPrefix}-${Date.now()}-${index}`,
+            contentType: file.mimetype,
+          }),
+        ),
+    );
+
+    const rawAreas: any[] = this.safeParse(createVenueDto.areas as any) ?? [];
     const processedAreas = await Promise.all(
-      rawAreas.map(async (area, index) => ({
-        ...area,
-        images: await uploadAreaImages(files, index, keyPrefix),
-      })),
+      rawAreas.map(async (area, index) => {
+        const areaImageUrls = await Promise.all(
+          files
+            .filter((f) => f.fieldname === `area_${index}_images`)
+            .map((file, i) =>
+              uploadImageToS3({
+                fileBuffer: file.buffer,
+                key: `venues/${keyPrefix}-area-${index}-${Date.now()}-${i}`,
+                contentType: file.mimetype,
+              }),
+            ),
+        );
+        return { ...area, images: areaImageUrls };
+      }),
     );
 
     return new this.venueModel({
       ...createVenueDto,
       images: imageUrls,
       areas: processedAreas,
-      pricingTiers: safeParse((createVenueDto as any).pricingTiers),
-      policies: safeParse((createVenueDto as any).policies),
-      amenities: safeParse((createVenueDto as any).amenities),
+      pricingTiers: this.safeParse((createVenueDto as any).pricingTiers),
+      policies: this.safeParse((createVenueDto as any).policies),
+      amenities: this.safeParse((createVenueDto as any).amenities),
     }).save();
   }
 
@@ -97,19 +118,64 @@ export class VenueService {
     if (!existingVenue) throw new NotFoundException('Venue not found');
 
     // ── Venue-level images ───────────────────────────────────────────────────
-    const newVenueImageUrls = await uploadVenueImages(files.filter((f) => f.fieldname === 'images'), `update-${id}`);
-    const keptVenueImages = parseExistingImages(updateVenueDto.existingImages);
-    await bulkDeleteFromS3((existingVenue.images ?? []).filter((url) => !keptVenueImages.includes(url)));
+    const newVenueImageUrls = await Promise.all(
+      files
+        .filter((f) => f.fieldname === 'images')
+        .map((file, index) =>
+          uploadImageToS3({
+            fileBuffer: file.buffer,
+            key: `venues/update-${id}-${Date.now()}-${index}`,
+            contentType: file.mimetype,
+          }),
+        ),
+    );
+
+    const keptVenueImages = this.parseExistingImages(updateVenueDto.existingImages);
+
+    await Promise.all(
+      (existingVenue.images ?? [])
+        .filter((url) => !keptVenueImages.includes(url))
+        .map((url) => {
+          const key = extractS3KeyFromUrl(url);
+          if (!key) return Promise.resolve();
+          return deleteImageFromS3({ key }).catch((err) =>
+            console.error(`Failed to delete S3 key "${key}":`, err),
+          );
+        }),
+    );
 
     // ── Per-area images ──────────────────────────────────────────────────────
-    const parsedAreas: any[] = safeParse(updateVenueDto.areas) ?? [];
+    const parsedAreas: any[] = this.safeParse(updateVenueDto.areas) ?? [];
     const existingAreas: any[] = (existingVenue.areas as any[]) ?? [];
 
     const processedAreas = await Promise.all(
       parsedAreas.map(async (area, index) => {
-        const keptAreaImages = parseExistingImages(updateVenueDto[`existingAreaImages_${index}`]);
-        const newAreaImageUrls = await uploadAreaImages(files, index, id.toString());
-        await bulkDeleteFromS3((existingAreas[index]?.images ?? []).filter((url) => !keptAreaImages.includes(url)));
+        const keptAreaImages = this.parseExistingImages(updateVenueDto[`existingAreaImages_${index}`]);
+
+        const newAreaImageUrls = await Promise.all(
+          files
+            .filter((f) => f.fieldname === `area_${index}_images`)
+            .map((file, i) =>
+              uploadImageToS3({
+                fileBuffer: file.buffer,
+                key: `venues/${id}-area-${index}-${Date.now()}-${i}`,
+                contentType: file.mimetype,
+              }),
+            ),
+        );
+
+        await Promise.all(
+          (existingAreas[index]?.images ?? [])
+            .filter((url) => !keptAreaImages.includes(url))
+            .map((url) => {
+              const key = extractS3KeyFromUrl(url);
+              if (!key) return Promise.resolve();
+              return deleteImageFromS3({ key }).catch((err) =>
+                console.error(`Failed to delete S3 key "${key}":`, err),
+              );
+            }),
+        );
+
         return { ...area, images: [...keptAreaImages, ...newAreaImageUrls] };
       }),
     );
@@ -119,9 +185,9 @@ export class VenueService {
       ...updateVenueDto,
       images: [...keptVenueImages, ...newVenueImageUrls],
       areas: processedAreas,
-      pricingTiers: safeParse(updateVenueDto.pricingTiers),
-      policies: safeParse(updateVenueDto.policies),
-      amenities: safeParse(updateVenueDto.amenities),
+      pricingTiers: this.safeParse(updateVenueDto.pricingTiers),
+      policies: this.safeParse(updateVenueDto.policies),
+      amenities: this.safeParse(updateVenueDto.amenities),
     };
 
     delete formattedData.existingImages;
@@ -154,5 +220,21 @@ export class VenueService {
     venue.isDeleted = true;
     await venue.save();
     return { message: 'Venue deleted successfully' };
+  }
+
+  // ─── Private Helpers─────────────────────────
+
+  private safeParse(val: any): any {
+    if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+      try { return JSON.parse(val); } catch { return val; }
+    }
+    return val;
+  }
+
+  private parseExistingImages(raw: any): string[] {
+    if (!raw) return [];
+    if (typeof raw === 'string' && raw.startsWith('[')) return JSON.parse(raw);
+    if (Array.isArray(raw)) return raw;
+    return [raw];
   }
 }
