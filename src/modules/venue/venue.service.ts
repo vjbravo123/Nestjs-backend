@@ -20,43 +20,70 @@ export class VenueService {
     @InjectModel(Venue.name) private venueModel: VenueModel,
   ) {}
 
+  private async uploadSequential(
+    files: Express.Multer.File[],
+    keyPrefix: string,
+  ): Promise<string[]> {
+    const urls: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      const url = await uploadImageToS3({
+        fileBuffer: file.buffer,
+        key: `${keyPrefix}-${Date.now()}-${i}-${file.originalname}`,
+        contentType: file.mimetype,
+      });
+
+      urls.push(url);
+
+      // ✅ free memory (VERY IMPORTANT)
+      (file as any).buffer = null;
+    }
+
+    return urls;
+  }
   // ─── create ─────────────────────────────────────────────────────────────────
 
-  async create(createVenueDto: CreateVenueDto, files: Array<Express.Multer.File>): Promise<Venue> {
-    if (createVenueDto.capacityMax < createVenueDto.capacityMin)
-      throw new BadRequestException('Max capacity cannot be less than Min capacity');
+   async create(
+    createVenueDto: CreateVenueDto,
+    files: Array<Express.Multer.File>,
+  ): Promise<Venue> {
+    if (createVenueDto.capacityMax < createVenueDto.capacityMin) {
+      throw new BadRequestException(
+        'Max capacity cannot be less than Min capacity',
+      );
+    }
 
     const keyPrefix = createVenueDto.name.replace(/\s+/g, '-');
 
-    const imageUrls = await Promise.all(
-      files
-        .filter((f) => f.fieldname === 'images')
-        .map((file, index) =>
-          uploadImageToS3({
-            fileBuffer: file.buffer,
-            key: `venues/${keyPrefix}-${Date.now()}-${index}`,
-            contentType: file.mimetype,
-          }),
-        ),
-    );
+    // ✅ MAIN IMAGES
+    const mainImages = files.filter((f) => f.fieldname === 'images');
+    const imageUrls = await this.uploadSequential(mainImages, keyPrefix);
 
+    // ✅ PARSE AREAS
     const rawAreas: any[] = this.safeParse(createVenueDto.areas as any) ?? [];
-    const processedAreas = await Promise.all(
-      rawAreas.map(async (area, index) => {
-        const areaImageUrls = await Promise.all(
-          files
-            .filter((f) => f.fieldname === `area_${index}_images`)
-            .map((file, i) =>
-              uploadImageToS3({
-                fileBuffer: file.buffer,
-                key: `venues/${keyPrefix}-area-${index}-${Date.now()}-${i}`,
-                contentType: file.mimetype,
-              }),
-            ),
-        );
-        return { ...area, images: areaImageUrls };
-      }),
-    );
+
+    const processedAreas: any[] = [];
+
+    for (let i = 0; i < rawAreas.length; i++) {
+      const area = rawAreas[i];
+
+      // ✅ FIXED HERE
+      const areaFiles = files.filter(
+        (f) => f.fieldname === `area_${i}_images`,
+      );
+
+      const areaImages = await this.uploadSequential(
+        areaFiles,
+        `${keyPrefix}-area-${i}`,
+      );
+
+      processedAreas.push({
+        ...area,
+        images: areaImages,
+      });
+    }
 
     return new this.venueModel({
       ...createVenueDto,
@@ -108,33 +135,56 @@ export class VenueService {
   // ─── update ──────────────────────────────────────────────────────────────────
 
   async update(id: Types.ObjectId, updateVenueDto: any, files: Array<Express.Multer.File>): Promise<Venue> {
-    if (
-      updateVenueDto.capacityMin !== undefined &&
-      updateVenueDto.capacityMax !== undefined &&
-      Number(updateVenueDto.capacityMax) < Number(updateVenueDto.capacityMin)
-    ) throw new BadRequestException('Max capacity cannot be less than Min capacity');
+  if (
+    updateVenueDto.capacityMin !== undefined &&
+    updateVenueDto.capacityMax !== undefined &&
+    Number(updateVenueDto.capacityMax) < Number(updateVenueDto.capacityMin)
+  ) throw new BadRequestException('Max capacity cannot be less than Min capacity');
 
-    const existingVenue = await this.venueModel.findById(id).exec();
-    if (!existingVenue) throw new NotFoundException('Venue not found');
+  const existingVenue = await this.venueModel.findById(id).exec();
+  if (!existingVenue) throw new NotFoundException('Venue not found');
 
-    // ── Venue-level images ───────────────────────────────────────────────────
-    const newVenueImageUrls = await Promise.all(
-      files
-        .filter((f) => f.fieldname === 'images')
-        .map((file, index) =>
-          uploadImageToS3({
-            fileBuffer: file.buffer,
-            key: `venues/update-${id}-${Date.now()}-${index}`,
-            contentType: file.mimetype,
-          }),
-        ),
+  // ── Venue-level images ───────────────────────────────────────────────────
+  const newVenueFiles = files.filter((f) => f.fieldname === 'images');
+  const newVenueImageUrls = await this.uploadSequential(
+    newVenueFiles,
+    `venues/update-${id}`,
+  );
+
+  const keptVenueImages = this.parseExistingImages(updateVenueDto.existingImages);
+
+  await Promise.all(
+    (existingVenue.images ?? [])
+      .filter((url) => !keptVenueImages.includes(url))
+      .map((url) => {
+        const key = extractS3KeyFromUrl(url);
+        if (!key) return Promise.resolve();
+        return deleteImageFromS3({ key }).catch((err) =>
+          console.error(`Failed to delete S3 key "${key}":`, err),
+        );
+      }),
+  );
+
+  // ── Per-area images ──────────────────────────────────────────────────────
+  const parsedAreas: any[] = this.safeParse(updateVenueDto.areas) ?? [];
+  const existingAreas: any[] = (existingVenue.areas as any[]) ?? [];
+
+  const processedAreas: any[] = [];
+
+  for (let index = 0; index < parsedAreas.length; index++) {
+    const area = parsedAreas[index];
+
+    const keptAreaImages = this.parseExistingImages(updateVenueDto[`existingAreaImages_${index}`]);
+
+    const newAreaFiles = files.filter((f) => f.fieldname === `area_${index}_images`);
+    const newAreaImageUrls = await this.uploadSequential(
+      newAreaFiles,
+      `venues/${id}-area-${index}`,
     );
 
-    const keptVenueImages = this.parseExistingImages(updateVenueDto.existingImages);
-
     await Promise.all(
-      (existingVenue.images ?? [])
-        .filter((url) => !keptVenueImages.includes(url))
+      (existingAreas[index]?.images ?? [])
+        .filter((url) => !keptAreaImages.includes(url))
         .map((url) => {
           const key = extractS3KeyFromUrl(url);
           if (!key) return Promise.resolve();
@@ -144,64 +194,34 @@ export class VenueService {
         }),
     );
 
-    // ── Per-area images ──────────────────────────────────────────────────────
-    const parsedAreas: any[] = this.safeParse(updateVenueDto.areas) ?? [];
-    const existingAreas: any[] = (existingVenue.areas as any[]) ?? [];
-
-    const processedAreas = await Promise.all(
-      parsedAreas.map(async (area, index) => {
-        const keptAreaImages = this.parseExistingImages(updateVenueDto[`existingAreaImages_${index}`]);
-
-        const newAreaImageUrls = await Promise.all(
-          files
-            .filter((f) => f.fieldname === `area_${index}_images`)
-            .map((file, i) =>
-              uploadImageToS3({
-                fileBuffer: file.buffer,
-                key: `venues/${id}-area-${index}-${Date.now()}-${i}`,
-                contentType: file.mimetype,
-              }),
-            ),
-        );
-
-        await Promise.all(
-          (existingAreas[index]?.images ?? [])
-            .filter((url) => !keptAreaImages.includes(url))
-            .map((url) => {
-              const key = extractS3KeyFromUrl(url);
-              if (!key) return Promise.resolve();
-              return deleteImageFromS3({ key }).catch((err) =>
-                console.error(`Failed to delete S3 key "${key}":`, err),
-              );
-            }),
-        );
-
-        return { ...area, images: [...keptAreaImages, ...newAreaImageUrls] };
-      }),
-    );
-
-    // ── Build final payload ───────────────────────────────────────────────────
-    const formattedData: any = {
-      ...updateVenueDto,
-      images: [...keptVenueImages, ...newVenueImageUrls],
-      areas: processedAreas,
-      pricingTiers: this.safeParse(updateVenueDto.pricingTiers),
-      policies: this.safeParse(updateVenueDto.policies),
-      amenities: this.safeParse(updateVenueDto.amenities),
-    };
-
-    delete formattedData.existingImages;
-    Object.keys(formattedData)
-      .filter((k) => k.startsWith('existingAreaImages_'))
-      .forEach((k) => delete formattedData[k]);
-
-    const updatedVenue = await this.venueModel
-      .findByIdAndUpdate(id, { $set: formattedData }, { new: true, runValidators: true })
-      .exec();
-
-    if (!updatedVenue) throw new NotFoundException('Venue not found');
-    return updatedVenue;
+    processedAreas.push({
+      ...area,
+      images: [...keptAreaImages, ...newAreaImageUrls],
+    });
   }
+
+  // ── Build final payload ───────────────────────────────────────────────────
+  const formattedData: any = {
+    ...updateVenueDto,
+    images: [...keptVenueImages, ...newVenueImageUrls],
+    areas: processedAreas,
+    pricingTiers: this.safeParse(updateVenueDto.pricingTiers),
+    policies: this.safeParse(updateVenueDto.policies),
+    amenities: this.safeParse(updateVenueDto.amenities),
+  };
+
+  delete formattedData.existingImages;
+  Object.keys(formattedData)
+    .filter((k) => k.startsWith('existingAreaImages_'))
+    .forEach((k) => delete formattedData[k]);
+
+  const updatedVenue = await this.venueModel
+    .findByIdAndUpdate(id, { $set: formattedData }, { new: true, runValidators: true })
+    .exec();
+
+  if (!updatedVenue) throw new NotFoundException('Venue not found');
+  return updatedVenue;
+}
 
   // ─── toggleActive ────────────────────────────────────────────────────────────
 

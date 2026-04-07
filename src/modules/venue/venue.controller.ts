@@ -1,6 +1,7 @@
 import {
   Controller, Get, Post, Body, Patch, Param,
   Delete, UploadedFiles, UseInterceptors, UseGuards, Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
@@ -19,14 +20,26 @@ export class VenueController {
 
   // ─── Create ────────────────────────────────────────────────────────────────
 
+  
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @UseInterceptors(AnyFilesInterceptor())
-  create(
+  @UseInterceptors(
+    AnyFilesInterceptor({
+      limits: {
+        fileSize: 2 * 1024 * 1024,
+        files: 20,
+      },
+    }),
+  )
+  async create(
     @Body() createVenueDto: CreateVenueDto,
     @UploadedFiles() files: Array<Express.Multer.File>,
   ) {
+    if (!files?.length) {
+      throw new BadRequestException('At least one image is required');
+    }
+
     return this.venueService.create(createVenueDto, files);
   }
 
@@ -61,16 +74,23 @@ export class VenueController {
   // ─── Update ────────────────────────────────────────────────────────────────
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @UseInterceptors(AnyFilesInterceptor())
-  update(
-    @Param('id', MongoIdPipe) id: Types.ObjectId,
-    @Body() updateVenueDto: any,
-    @UploadedFiles() files: Array<Express.Multer.File>,
-  ) {
-    return this.venueService.update(id, updateVenueDto, files);
-  }
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
+@UseInterceptors(
+  AnyFilesInterceptor({
+    limits: {
+      fileSize: 2 * 1024 * 1024,
+      files: 20,
+    },
+  }),
+)
+update(
+  @Param('id', MongoIdPipe) id: Types.ObjectId,
+  @Body() updateVenueDto: any,
+  @UploadedFiles() files: Array<Express.Multer.File> = [],
+) {
+  return this.venueService.update(id, updateVenueDto, files ?? []);
+}
 
   @Patch(':id/active')
   @UseGuards(JwtAuthGuard, RolesGuard)
