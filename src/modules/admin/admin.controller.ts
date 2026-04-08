@@ -16,6 +16,9 @@ import { TokenService } from '../token/token.service';
 import { AdminLoginDto } from './admin-login.dto';
 import { Request, Response } from 'express';
 import * as bcrypt from 'bcrypt';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
 
 @Controller('admin')
 export class AdminController {
@@ -192,5 +195,12 @@ export class AdminController {
         status: 'error',
       };
     }
+  }
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('admin')
+    @Get('dashboard/stats')
+    @HttpCode(200)
+    async getDashboardStats() {
+    return this.adminService.getDashboardStats();
   }
 }

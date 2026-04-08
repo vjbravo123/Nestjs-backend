@@ -13,6 +13,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Get } from '@nestjs/common';
+import { User } from '../users/users.schema';
+import { ExperientialEvent } from '../experientialevent/experientialevent.schema';
+import { BirthdayEvent } from '../birthdayevent/birthdayevent.schema';
 
 export interface AdminDocument extends AdminDocBase {
     isPasswordMatch(inputPassword: string): Promise<boolean>;
@@ -22,6 +25,9 @@ export interface AdminDocument extends AdminDocBase {
 export class AdminService {
     constructor(
         @InjectModel(Admin.name) private adminModel: Model<AdminDocument>,
+        @InjectModel(User.name) private readonly userModel: Model<User>,
+        @InjectModel(ExperientialEvent.name) private readonly experientialEventModel: Model<ExperientialEvent>,
+        @InjectModel(BirthdayEvent.name) private readonly birthdayEventModel: Model<BirthdayEvent>,
         private readonly jwtService: JwtService,
         private readonly tokenService: TokenService,
     ) { }
@@ -198,4 +204,17 @@ export class AdminService {
         }
         return admin.tokenVersion || 0;
     }
+
+    async getDashboardStats() {
+  const [totalUsers, activeVendors, totalEvents] = await Promise.all([
+    this.userModel.countDocuments({ role: 'user', isDeleted: { $ne: true } }),
+    this.userModel.countDocuments({ role: 'vendor', isActive: true, isDeleted: { $ne: true } }),
+    Promise.all([
+      this.experientialEventModel.countDocuments({ isDeleted: { $ne: true } }),
+      this.birthdayEventModel.countDocuments({ isDeleted: { $ne: true } }),
+    ]).then(([experiential, birthday]) => experiential + birthday),
+  ]);
+
+  return { totalUsers, activeVendors, totalEvents };
+}
 }
