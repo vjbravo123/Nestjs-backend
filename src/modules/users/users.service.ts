@@ -321,4 +321,84 @@ export class UsersService {
     });
     return user;
   }
+
+async getStats() {
+  const now = new Date();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  const [
+    totalUsers,
+    activeUsers,
+    blockedUsers,
+    newThisMonth,
+    newLastMonth,
+    totalBeforeThisMonth,
+    blockedThisMonth,
+    blockedLastMonth,
+  ] = await Promise.all([
+    // Total users
+    this.userModel.countDocuments(),
+
+    // Active users
+    this.userModel.countDocuments({ isActive: true }),
+
+    // Blocked users
+    this.userModel.countDocuments({ isActive: false }),
+
+    // New users this month
+    this.userModel.countDocuments({ createdAt: { $gte: startOfThisMonth } }),
+
+    // New users last month
+    this.userModel.countDocuments({
+      createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth },
+    }),
+
+    // Total users before this month (for totalUsers growth)
+    this.userModel.countDocuments({ createdAt: { $lt: startOfThisMonth } }),
+
+    // Blocked users this month
+    this.userModel.countDocuments({
+      isActive: false,
+      createdAt: { $gte: startOfThisMonth },
+    }),
+
+    // Blocked users last month
+    this.userModel.countDocuments({
+      isActive: false,
+      createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth },
+    }),
+  ]);
+
+  const calculateGrowth = (current: number, previous: number): number => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return parseFloat((((current - previous) / previous) * 100).toFixed(1));
+  };
+
+  return {
+  totalUsers: {
+    count: totalUsers,
+    // Total users before this month vs now — how much has the base grown
+    growth: calculateGrowth(totalUsers, totalBeforeThisMonth),
+  },
+
+  activeUsers: {
+    count: activeUsers,
+    // Active now vs total before this month
+    growth: calculateGrowth(activeUsers, totalBeforeThisMonth),
+  },
+
+  blockedUsers: {
+    count: blockedUsers,
+    growth: calculateGrowth(blockedThisMonth, blockedLastMonth),
+  },
+
+  newThisMonth: {
+    count: newThisMonth,
+    // ✅ This month's signups vs last month's signups
+    growth: calculateGrowth(newThisMonth, newLastMonth),
+  },
+};
+}
+  
 }

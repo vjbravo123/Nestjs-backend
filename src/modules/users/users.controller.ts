@@ -163,4 +163,12 @@ export class UsersController {
     console.log('inside the update active status');
     return this.usersService.updateActive(userId);
   }
+ 
+  @Get('admin/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getUserStats() {
+    const stats = await this.usersService.getStats();
+    return stats;
+  }
 }
