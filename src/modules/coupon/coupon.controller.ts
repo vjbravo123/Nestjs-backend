@@ -65,6 +65,7 @@ export class CouponController {
       'isGlobal',
       'birthdayEvent',
       'userLimit',
+      'search'
     ]);
     const options = pick(query, ['page', 'limit', 'sortBy', 'populate']);
     // const coupons =
@@ -101,5 +102,18 @@ export class CouponController {
     //       message: 'Available coupons fetched successfully',
     //       data: coupons,
     //     };
+  }
+
+  @Get('stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  async getStats() {
+    const stats = await this.couponService.getStats();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Coupon stats fetched successfully',
+      data: stats,
+    };
   }
 }

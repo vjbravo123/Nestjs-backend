@@ -38,6 +38,17 @@ export class CategoryController {
     return this.categoryService.getCategory(query);
   }
 
+  @Get('admin/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getCategoryStats() {
+    const stats = await this.categoryService.getCategoryStats();
+    return {
+      message: 'Category stats retrieved successfully',
+      data: stats,
+    };
+  }
+
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')

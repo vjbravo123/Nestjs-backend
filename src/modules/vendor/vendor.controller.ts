@@ -25,7 +25,7 @@ export class VendorController {
     @Roles('admin')
     async listVendors(@Query() query: any) {
         // pick only filterable fields
-        const filters = pick(query, ['firstName', 'lastName', 'email', 'mobile', 'role', 'registrationStatus', 'search', 'isMobileVerify', 'category', 'isEmailVerify']);
+        const filters = pick(query, ['firstName', 'lastName', 'email', 'mobile', 'role', 'registrationStatus', 'search',  'status', 'isMobileVerify', 'category', 'isEmailVerify']);
         // pick pagination + sorting
         const options = pick(query, ['page', 'limit', 'sortBy']);
         const vendors = await this.vendorService.findAll({ ...filters, ...options });
@@ -468,4 +468,15 @@ export class VendorController {
             data: profile
         };
     }
+
+    @Get('admin/stats')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('admin')
+    async getVendorStats() {
+        const stats = await this.vendorService.getVendorStats();
+        return {
+            message: 'Vendor stats retrieved successfully',
+            data: stats,
+        };
+}
 }

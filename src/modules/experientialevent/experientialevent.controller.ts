@@ -579,4 +579,15 @@ async getCompleteEvent(@Param('eventId') eventId: string) {
             data: deletedEvent,
         };
     }
+
+    @Get('admin/stats')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('admin')
+    async getEventStats() {
+    const stats = await this.experientialEventService.getEventStats();
+    return {
+        message: 'Experiential event stats retrieved successfully',
+        data: stats,
+    };
+    }
 }

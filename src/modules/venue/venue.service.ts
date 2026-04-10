@@ -231,6 +231,38 @@ export class VenueService {
     venue.isActive = !venue.isActive;
     return venue.save();
   }
+  async getStats() {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [totalVenues, activeVenues, addedThisMonth, capacityAgg] = await Promise.all([
+    this.venueModel.countDocuments({ isDeleted: false }),
+
+    this.venueModel.countDocuments({ isActive: true, isDeleted: false }),
+
+    this.venueModel.countDocuments({
+      isDeleted: false,
+      createdAt: { $gte: startOfMonth },
+    }),
+
+    this.venueModel.aggregate([
+      { $match: { isDeleted: false } },
+      {
+        $group: {
+          _id: null,
+          totalCapacity: { $sum: '$capacityMax' }, 
+        },
+      },
+    ]),
+  ]);
+
+  return {
+    totalVenues,
+    addedThisMonth,
+    totalCapacity: capacityAgg[0]?.totalCapacity ?? 0,
+    activeVenues,
+  };
+}
 
   // ─── remove (soft delete) ────────────────────────────────────────────────────
 

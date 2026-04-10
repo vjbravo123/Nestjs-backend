@@ -2156,4 +2156,31 @@ export class AddOnService {
 
     return addOn;
   }
+
+  async getAddOnStats() {
+  const [
+    totalServices,
+    pendingReview,
+    approved,
+  ] = await Promise.all([
+    this.addOnModel.countDocuments({ isDeleted: { $ne: true } }),
+    this.addOnModel.countDocuments({ isVerify: false, isDeleted: { $ne: true } }),
+    this.addOnModel.countDocuments({ isVerify: true, isActive: true, isDeleted: { $ne: true } }),
+  ]);
+
+  return {
+    totalServices: {
+      count: totalServices,
+      label: 'Platform wide',
+    },
+    pendingReview: {
+      count: pendingReview,
+      label: 'Awaiting approval',
+    },
+    approved: {
+      count: approved,
+      label: 'Active services',
+    },
+  };
+}
 }

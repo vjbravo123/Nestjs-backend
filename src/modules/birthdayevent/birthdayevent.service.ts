@@ -13,6 +13,7 @@ import { AddOn } from '../addOn/addon.schema';
 import { CreateBirthdayEventDto } from './dto/create-birthdayevent.dto';
 import { UpdateBirthdayEventDto } from './dto/update-birthdayevent.dto';
 import { deleteImageFromS3 } from '../../common/utils/s3-upload.util';
+import { ExperientialEvent } from '../experientialevent/experientialevent.schema';
 
 @Injectable()
 export class BirthdayEventService {
@@ -295,6 +296,13 @@ export class BirthdayEventService {
     }
 
     if (filter.subCategory) match.subCategory = filter.subCategory;
+    if (filter.search) {
+      match.$or = [
+        { title: { $regex: filter.search, $options: 'i' } },
+        { description: { $regex: filter.search, $options: 'i' } },
+        { 'city.name': { $regex: filter.search, $options: 'i' } },
+      ];
+    }
 
     // Convert eventDate into day range (if provided)
     let startOfDay: Date | null = null;
@@ -814,6 +822,45 @@ export class BirthdayEventService {
 
     return { message: 'Birthday event deleted successfully' };
   }
+ async getEventStats() {
+  const now = new Date();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [
+    totalEvents,
+    totalEventsLastMonth,
+    activeEvents,
+    totalBookings,
+    totalBookingsThisMonth,
+  ] = await Promise.all([
+    this.birthdayEventModel.countDocuments({ isDeleted: { $ne: true } }),
+    this.birthdayEventModel.countDocuments({
+      isDeleted: { $ne: true },
+      createdAt: { $lt: startOfThisMonth },
+    }),
+    this.birthdayEventModel.countDocuments({ active: true, isDeleted: false }),
+    this.orderModel.countDocuments(),
+    this.orderModel.countDocuments({ createdAt: { $gte: startOfThisMonth } }),
+  ]);
+
+  const eventsAddedThisMonth = totalEvents - totalEventsLastMonth;
+
+  return {
+    totalEvents: {
+      count: totalEvents,
+      growthFromLastMonth: eventsAddedThisMonth >= 0
+        ? `+${eventsAddedThisMonth} from last month`
+        : `${eventsAddedThisMonth} from last month`,
+    },
+    totalBookings: {
+      count: totalBookings,
+      thisMonth: totalBookingsThisMonth,
+    },
+    activeEvents: {
+      count: activeEvents,
+    },
+  };
+}
 }
 
 function extractS3KeyFromUrl(url: string): string | null {

@@ -341,7 +341,7 @@ async getStats() {
     this.userModel.countDocuments(),
 
     // Active users
-    this.userModel.countDocuments({ isActive: true }),
+    this.userModel.countDocuments({ isActive: true}),
 
     // Blocked users
     this.userModel.countDocuments({ isActive: false }),

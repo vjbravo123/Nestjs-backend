@@ -289,7 +289,15 @@ export class VendorService {
     if (filter.isActive !== undefined) {
       filter.isActive = filter.isActive === 'true' || filter.isActive === true;
     }
-
+    if (filter.status) {
+      if (filter.status === 'blocked') {
+        filter.isActive = false;
+      } else {
+        filter.status = filter.status; // 'verified', 'pending' etc. pass through
+      }
+      // 'blocked' is not a real status value — it's isActive: false
+      if (filter.status === 'blocked') delete filter.status;
+    }
     // 🟢 Handle expiry filter
     if (filter.isExpire === 'false') {
       filter.expiryDate = { $gte: new Date() };
@@ -854,7 +862,67 @@ export class VendorService {
     return result[0];
   }
 
+  async getVendorStats() {
+  const now = new Date();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
+  const [
+    totalVendors,
+    totalVendorsLastMonth,
+    verifiedVendors,
+    verifiedVendorsLastMonth,
+    pendingVendors,
+    pendingVendorsLastMonth,
+  ] = await Promise.all([
+    // Total vendors (all time)
+    this.vendorModel.countDocuments(),
+
+    // Total vendors before this month
+    this.vendorModel.countDocuments({
+      createdAt: { $lt: startOfThisMonth },
+    }),
+
+    // Verified vendors (all time)
+    this.vendorModel.countDocuments({ isVerified: true }),
+
+    // Verified vendors before this month
+    this.vendorModel.countDocuments({
+      isVerified: true,
+      createdAt: { $lt: startOfThisMonth },
+    }),
+
+    // Pending verification (all time)
+    this.vendorModel.countDocuments({ isVerified: false }),
+
+    // Pending vendors before this month
+    this.vendorModel.countDocuments({
+      isVerified: false,
+      createdAt: { $lt: startOfThisMonth },
+    }),
+  ]);
+
+  const calcGrowth = (current: number, previous: number): string => {
+    if (previous === 0) return current > 0 ? '+100%' : '0%';
+    const growth = ((current - previous) / previous) * 100;
+    return `${growth >= 0 ? '+' : ''}${growth.toFixed(0)}%`;
+  };
+
+  return {
+    totalVendors: {
+      count: totalVendors,
+      growthFromLastMonth: calcGrowth(totalVendors, totalVendorsLastMonth),
+    },
+    verifiedVendors: {
+      count: verifiedVendors,
+      growthFromLastMonth: calcGrowth(verifiedVendors, verifiedVendorsLastMonth),
+    },
+    pendingVerification: {
+      count: pendingVendors,
+      growthFromLastMonth: calcGrowth(pendingVendors, pendingVendorsLastMonth),
+    },
+  };
+}
 
 
 }
@@ -934,4 +1002,6 @@ function getVendorPublicProfile(vendor: VendorDocument, hasBooked: boolean) {
 
 
   };
+
+  
 }

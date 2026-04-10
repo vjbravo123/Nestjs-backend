@@ -17,6 +17,10 @@ export class AdminQueryExperientialEventDto {
     @IsString()
     title?: string;
 
+    @IsOptional()
+    @IsString()
+    search?: string;
+
 
     @IsOptional()
     @IsString()

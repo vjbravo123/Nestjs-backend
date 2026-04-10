@@ -131,4 +131,42 @@ export class CategoryService {
     return await resolver();  // 🔥 only calls one service
   }
 
+  async getCategoryStats() {
+  const now = new Date();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [
+    totalCategories,
+    totalCategoriesLastMonth,
+    activeCategories,
+    inactiveCategories,
+  ] = await Promise.all([
+    this.categoryModel.countDocuments(),
+    this.categoryModel.countDocuments({
+      createdAt: { $lt: startOfThisMonth },
+    }),
+    this.categoryModel.countDocuments({ isActive: true }),
+    this.categoryModel.countDocuments({ isActive: false }),
+  ]);
+
+  const growthCount = totalCategories - totalCategoriesLastMonth;
+
+  return {
+    totalCategories: {
+      count: totalCategories,
+      growthFromLastMonth: growthCount >= 0
+        ? `+${growthCount} from last month`
+        : `${growthCount} from last month`,
+    },
+    activeCategories: {
+      count: activeCategories,
+      label: 'Currently visible',
+    },
+    inactiveCategories: {
+      count: inactiveCategories,
+      label: 'Currently hidden',
+    },
+  };
+}
+
 }

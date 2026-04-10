@@ -16,6 +16,7 @@ import { Get } from '@nestjs/common';
 import { User } from '../users/users.schema';
 import { ExperientialEvent } from '../experientialevent/experientialevent.schema';
 import { BirthdayEvent } from '../birthdayevent/birthdayevent.schema';
+import { Vendor, VendorDocument } from '../vendor/vendor.schema';
 
 export interface AdminDocument extends AdminDocBase {
     isPasswordMatch(inputPassword: string): Promise<boolean>;
@@ -26,6 +27,7 @@ export class AdminService {
     constructor(
         @InjectModel(Admin.name) private adminModel: Model<AdminDocument>,
         @InjectModel(User.name) private readonly userModel: Model<User>,
+        @InjectModel(Vendor.name) private readonly vendorModel: Model<VendorDocument>,
         @InjectModel(ExperientialEvent.name) private readonly experientialEventModel: Model<ExperientialEvent>,
         @InjectModel(BirthdayEvent.name) private readonly birthdayEventModel: Model<BirthdayEvent>,
         private readonly jwtService: JwtService,
@@ -208,7 +210,7 @@ export class AdminService {
     async getDashboardStats() {
   const [totalUsers, activeVendors, totalEvents] = await Promise.all([
     this.userModel.countDocuments({ role: 'user', isDeleted: { $ne: true } }),
-    this.userModel.countDocuments({ role: 'vendor', isActive: true, isDeleted: { $ne: true } }),
+    this.vendorModel.countDocuments({ isActive: true }),
     Promise.all([
       this.experientialEventModel.countDocuments({ isDeleted: { $ne: true } }),
       this.birthdayEventModel.countDocuments({ isDeleted: { $ne: true } }),

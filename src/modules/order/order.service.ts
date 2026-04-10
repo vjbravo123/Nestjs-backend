@@ -1340,4 +1340,24 @@ async generateBookingSummaryPdf(orderId: Types.ObjectId, userId: Types.ObjectId)
         return `ORD-${new Date().getFullYear()}-${String(count + 1).padStart(6, '0')}`;
     }
 
+    async getOrderStats() {
+  const now = new Date();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [
+    totalBookings,
+    confirmed,
+    pending,
+    completed,
+    cancelled,
+  ] = await Promise.all([
+    this.orderModel.countDocuments(),
+    this.orderModel.countDocuments({ orderStatus: OrderStatus.CONFIRMED }),
+    this.orderModel.countDocuments({ orderStatus: OrderStatus.CREATED }),
+    this.orderModel.countDocuments({ orderStatus: OrderStatus.COMPLETED }),
+    this.orderModel.countDocuments({ orderStatus: OrderStatus.CANCELLED }),
+  ]);
+
+  return { totalBookings, confirmed, pending, completed, cancelled };
+}
 }

@@ -12,6 +12,7 @@ import { TokenModule } from '../token/token.module';
 import { User, UserSchema } from '../users/users.schema';
 import { ExperientialEvent, ExperientialEventSchema } from '../experientialevent/experientialevent.schema';
 import { BirthdayEvent, BirthdayEventSchema } from '../birthdayevent/birthdayevent.schema';
+import { Vendor, VendorSchema } from '../vendor/vendor.schema';
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import { BirthdayEvent, BirthdayEventSchema } from '../birthdayevent/birthdayeve
             { name: User.name, schema: UserSchema },          
             { name: ExperientialEvent.name, schema: ExperientialEventSchema },
             { name: BirthdayEvent.name, schema: BirthdayEventSchema },
+            { name: Vendor.name, schema: VendorSchema },
     ]),
         PassportModule,
         JwtModule.register({

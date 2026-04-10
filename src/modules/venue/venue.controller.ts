@@ -2,6 +2,8 @@ import {
   Controller, Get, Post, Body, Patch, Param,
   Delete, UploadedFiles, UseInterceptors, UseGuards, Query,
   BadRequestException,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
@@ -17,6 +19,19 @@ import { MongoIdPipe } from 'src/common/pipes/parse-objectid.pipe';
 @Controller('venues')
 export class VenueController {
   constructor(private readonly venueService: VenueService) {}
+
+  @Get('stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  async getStats() {
+    const stats = await this.venueService.getStats();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Venue stats fetched successfully',
+      data: stats,
+    };
+  }
 
   // ─── Create ────────────────────────────────────────────────────────────────
 
@@ -107,4 +122,6 @@ update(
   remove(@Param('id', MongoIdPipe) id: Types.ObjectId) {
     return this.venueService.remove(id);
   }
+
+  
 }

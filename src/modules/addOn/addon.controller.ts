@@ -607,4 +607,15 @@ export class AddOnController {
   //     const options = pick(query, ['page', 'limit', 'sortBy', 'populate']);
   //     return this.addOnService.findAll({ ...filters, ...options });
   // }
+
+  @Get('stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getAddOnStats() {
+    const stats = await this.addOnService.getAddOnStats();
+    return {
+      message: 'Add-on stats retrieved successfully',
+      data: stats,
+    };
+  }
 }

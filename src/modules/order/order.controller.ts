@@ -260,6 +260,18 @@ export class OrderController {
     return this.adminOrderService.getOrderByQuery(query);
   }
 
+  
+  @Get('admin/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getOrderStats() {
+    const stats = await this.orderService.getOrderStats();
+    return {
+      message: 'Order stats retrieved successfully',
+      data: stats,
+    };
+  }
+
   @Get('admin/:orderId')
   @UseGuards(JwtAuthGuard, RolesGuard, OwnershipGuard)
   @Roles('admin')
@@ -291,6 +303,7 @@ export class OrderController {
     return this.orderQueryService.getUserOrderCount(userId!);
   }
 
+
   /**
    * Update order by admin
    * PATCH /orders/admin/:orderId
@@ -309,4 +322,5 @@ export class OrderController {
   ) {
     return this.adminOrderService.updateOrderByAdmin(orderId, updateDto);
   }
+
 }

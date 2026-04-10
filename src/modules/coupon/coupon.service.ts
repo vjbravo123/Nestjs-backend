@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Coupon, CouponDocument } from './coupon.schema';
 import { CreateCouponDto } from './dto/create-coupon.dto';
+import { Order, OrderDocument } from '../order/order.schema';
 
 interface FindUserCouponParams {
     userId: string;
@@ -20,6 +21,7 @@ interface FindUserCouponParams {
 export class CouponService {
     constructor(
         @InjectModel(Coupon.name) private readonly couponModel: Model<Coupon>,
+         @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     ) { }
 
     async create(dto: CreateCouponDto): Promise<Coupon> {
@@ -55,6 +57,11 @@ export class CouponService {
         // 🟢 Convert userLimit to number
         if (filter.userLimit) {
             filter.userLimit = Number(filter.userLimit);
+        }
+        // 🟢 Search by coupon code (partial match)
+        if (filter.code) {
+            filter.code = { $regex: filter.code, $options: 'i' };
+            delete filter.search;
         }
 
         const andConditions: any[] = [];
@@ -222,4 +229,48 @@ export class CouponService {
     async findByCode(code: string): Promise<Coupon | null> {
         return this.couponModel.findOne({ code, isActive: true }).exec();
     }
+
+    async getStats() {
+  const now = new Date();
+
+  const [totalCoupons, activeCoupons, usageAgg, savingsAgg] = await Promise.all([
+    this.couponModel.countDocuments(),
+
+    this.couponModel.countDocuments({
+      isActive: true,
+      expiryDate: { $gte: now },
+    }),
+
+    this.couponModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalUsage: { $sum: '$usageCount' },
+        },
+      },
+    ]),
+
+    this.orderModel.aggregate([
+      {
+        $match: {
+          couponCode: { $exists: true, $ne: null },
+          paymentStatus: { $nin: ['failed', 'refunded'] }, 
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalSavings: { $sum: '$discount' },
+        },
+      },
+    ]),
+  ]);
+
+  return {
+    totalCoupons,
+    activeCoupons,
+    totalUsage: usageAgg[0]?.totalUsage ?? 0,
+    totalSavings: savingsAgg[0]?.totalSavings ?? 0,
+  };
+}
 }

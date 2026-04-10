@@ -205,4 +205,15 @@ export class BirthdayEventController {
         return this.birthdayEventService.deleteEvent(eventId);
     }
 
+    @Get('admin/stats')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('admin')
+    async getEventStats() {
+    const stats = await this.birthdayEventService.getEventStats();
+    return {
+        message: 'Event stats retrieved successfully',
+        data: stats,
+    };
+}
+
 }

@@ -26,6 +26,7 @@ import {
 import { OrderService } from '../order/order.service';
 import { OrderAvailabilityService } from '../order/services/order-availability.service';
 import { extractS3KeyFromUrl } from '../../common/utils/s3-upload.util';
+import { Order } from '../order/order.schema';
 const lookupAndUnwind = (
   localField: string,
   from: string,
@@ -59,6 +60,8 @@ export class ExperientialEventService {
   constructor(
     @InjectModel(ExperientialEvent.name)
     private readonly experientialEventModel: Model<ExperientialEventDocument>,
+    @InjectModel(Order.name)
+    private readonly orderModel: Model<Order>,
     private eventChangeHistoryService: EventChangeHistoryService,
     private readonly orderService: OrderService,
     private readonly orderAvailabilityService: OrderAvailabilityService,
@@ -299,6 +302,16 @@ async getByIdWithAggregate(eventId: string): Promise<any> {
     if (city?.length) {
       match['city.name'] = { $in: city };
     }
+
+    if (filter.search) {
+      const searchRegex = new RegExp(String(filter.search).trim(), 'i');
+      match.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { 'city.name': searchRegex },
+      ];
+    }
+
 
     // --- Category filters ---
     if (filter.experientialEventCategory) {
@@ -2203,4 +2216,52 @@ async getByIdWithAggregate(eventId: string): Promise<any> {
 
     return event;
   }
+
+  async getEventStats() {
+  const now = new Date();
+  const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [
+    totalEvents,
+    totalEventsLastMonth,
+    featuredEvents,
+    totalBookings,
+    totalBookingsThisMonth,
+  ] = await Promise.all([
+    this.experientialEventModel.countDocuments({ isDeleted: { $ne: true } }),
+    this.experientialEventModel.countDocuments({
+      isDeleted: { $ne: true },
+      createdAt: { $lt: startOfThisMonth },
+    }),
+    this.experientialEventModel.countDocuments({
+      isShowcaseEvent: true,
+      isDeleted: { $ne: true },
+    }),
+    this.orderModel.countDocuments({
+      'event.eventCategory': 'ExperientialEvent',
+    }),
+    this.orderModel.countDocuments({
+      'event.eventCategory': 'ExperientialEvent',
+      createdAt: { $gte: startOfThisMonth },
+    }),
+  ]);
+
+  const eventsAddedThisMonth = totalEvents - totalEventsLastMonth;
+
+  return {
+    totalEvents: {
+      count: totalEvents,
+      growthFromLastMonth: eventsAddedThisMonth >= 0
+        ? `+${eventsAddedThisMonth} from last month`
+        : `${eventsAddedThisMonth} from last month`,
+    },
+    totalBookings: {
+      count: totalBookings,
+      thisMonth: totalBookingsThisMonth,
+    },
+    featuredEvents: {
+      count: featuredEvents,
+    },
+  };
+}
 }
