@@ -354,6 +354,8 @@ export class AdminOrderService {
       sortBy = 'createdAt',
       sortDir = 'desc',
       status,
+      paymentStatus,   // 🆕
+      eventCategory,   // 🆕
       userId,
       search,
       startDate,
@@ -372,6 +374,13 @@ export class AdminOrderService {
     const filters: any = {};
 
     if (status) filters.status = status;
+
+     // 🆕 Payment status
+    if (paymentStatus) filters.paymentStatus = paymentStatus;
+
+    // 🆕 Event category
+    if (eventCategory) filters['event.eventCategory'] = eventCategory;
+
 
     if (userId) {
       if (!Types.ObjectId.isValid(userId))

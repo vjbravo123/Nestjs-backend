@@ -9,7 +9,18 @@ export enum OrderSortField {
     STATUS = 'status',
     ORDER_NUMBER = 'orderNumber',
 }
+export enum EventCategoryFilter {
+  BIRTHDAY = 'BirthdayEvent',
+  EXPERIENTIAL = 'ExperientialEvent',
+  ADDON = 'AddOn',
+}
 
+export enum PaymentStatusFilter {
+  PENDING = 'pending',
+  PAID = 'paid',
+  PAYMENT_FAILED = 'payment_failed',
+  REFUNDED = 'refunded',
+}
 export class AdminOrdersQueryDto {
     @IsOptional()
     @IsString()
@@ -18,6 +29,16 @@ export class AdminOrdersQueryDto {
     @IsOptional()
     @IsEnum(['pending', 'paid', 'payment_failed', 'processing', 'completed', 'cancelled', 'refunded'])
     status?: string;
+
+    // 🆕 Payment status filter
+    @IsOptional()
+    @IsEnum(PaymentStatusFilter)
+    paymentStatus?: PaymentStatusFilter;
+
+    // 🆕 Event category filter
+    @IsOptional()
+    @IsEnum(EventCategoryFilter)
+    eventCategory?: EventCategoryFilter;
 
     @IsOptional()
     @IsMongoId()
@@ -53,4 +74,5 @@ export class AdminOrdersQueryDto {
     @IsOptional()
     @IsString()
     endDate?: string; // ISO date
+
 }
