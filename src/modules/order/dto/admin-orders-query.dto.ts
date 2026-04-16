@@ -3,6 +3,7 @@ import { IsOptional, IsEnum, IsString, IsInt, Min, Max, IsMongoId } from 'class-
 import { Type } from 'class-transformer';
 import { Types } from 'mongoose';
 import { IsValidObjectId, TransformToObjectId } from '../../../common/validators/is-valid-objectid.validator';
+import { OrderStatus } from '../order.schema';
 export enum OrderSortField {
     CREATED_AT = 'createdAt',
     TOTAL = 'totalAmount',
@@ -27,8 +28,9 @@ export class AdminOrdersQueryDto {
     search?: string; // orderNumber or user email/phone
 
     @IsOptional()
-    @IsEnum(['pending', 'paid', 'payment_failed', 'processing', 'completed', 'cancelled', 'refunded'])
-    status?: string;
+    // @IsEnum(['pending', 'paid', 'payment_failed', 'processing', 'completed', 'cancelled', 'refunded'])
+    @IsEnum(OrderStatus)
+    status?: OrderStatus;
 
     // 🆕 Payment status filter
     @IsOptional()

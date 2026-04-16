@@ -373,7 +373,7 @@ export class AdminOrderService {
     // ---------------------------
     const filters: any = {};
 
-    if (status) filters.status = status;
+    if (status) filters.orderStatus = status;
 
      // 🆕 Payment status
     if (paymentStatus) filters.paymentStatus = paymentStatus;

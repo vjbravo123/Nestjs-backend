@@ -10,65 +10,86 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
+
 import { VendorTrackingService } from './vendor-tracking.service';
-import { VerifyOtpDto } from './dto/tracking-request.dto';
-import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { ArriveDto, VerifyOtpDto } from './dto/tracking-request.dto';
+import { JwtAuthGuard }            from 'src/modules/auth/guards/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
-@Controller('vendor/tracking')
+@Controller('vendor-tracking')
 export class VendorTrackingController {
   constructor(private readonly trackingService: VendorTrackingService) {}
 
   /**
-   * STEP 0: Hydration
-   * Fetches the current tracking state of a booking.
+   * GET /vendor/tracking/:bookingId
+   * Returns current trackingStatus 
    */
   @Get(':bookingId')
   getStatus(@Param('bookingId') bookingId: string, @Req() req: any) {
-    // req.user contains vendorId as per your debug data
     return this.trackingService.getTrackingStatus(bookingId, req.user.vendorId);
   }
 
   /**
-   * STEP 1: Arrival Confirmation
-   * Records the timestamp when a vendor clicks "I Have Arrived".
+   * POST /vendor/tracking/:bookingId/arrive
+   * Body: { latitude: number, longitude: number }
+   * Guards: PENDING → date today → GPS proximity
+   * Result: ARRIVED
    */
   @Post(':bookingId/arrive')
-  arrive(@Param('bookingId') bookingId: string, @Req() req: any) {
-    return this.trackingService.markArrival(bookingId, req.user.vendorId);
+  arrive(
+    @Param('bookingId') bookingId: string,
+    @Body() dto: ArriveDto,
+    @Req() req: any,
+  ) {
+    return this.trackingService.markArrival(
+      bookingId,
+      req.user.vendorId,
+      dto.latitude,
+      dto.longitude,
+    );
   }
 
   /**
-   * STEP 2: Arrival Evidence
-   * Uploads photos of the venue/setup as proof of arrival.
+   * POST /vendor/tracking/:bookingId/upload-arrival
+   * Form-data key: "images" (min 2 files)
+   * Guards: ARRIVED → ≥ 2 images
+   * Result: ARRIVAL_PHOTOS_UPLOADED
    */
   @Post(':bookingId/upload-arrival')
-  @UseInterceptors(FilesInterceptor('images'))
+  @UseInterceptors(
+    FilesInterceptor('images', 2, {
+      limits: {
+        fileSize: 2 * 1024 * 1024,
+      },
+    }),
+  )
   uploadArrival(
     @Param('bookingId') bookingId: string,
     @UploadedFiles() files: Express.Multer.File[],
     @Req() req: any,
   ) {
-    return this.trackingService.uploadPhotos(
+    return this.trackingService.uploadArrivalPhotos(
       bookingId,
       req.user.vendorId,
       files,
-      'arrival',
     );
   }
 
   /**
-   * STEP 3a: OTP Trigger
-   * Generates a code and sends it to the CLIENT'S mobile.
+   * POST /vendor/tracking/:bookingId/request-start-otp
+   * Guards: ARRIVAL_PHOTOS_UPLOADED → date today
+   * Result: START_OTP_SENT (OTP sent to client mobile)
    */
-  @Post(':bookingId/request-otp')
-  requestOtp(@Param('bookingId') bookingId: string, @Req() req: any) {
-    return this.trackingService.sendOtp(bookingId, req.user.vendorId);
+  @Post(':bookingId/request-start-otp')
+  requestStartOtp(@Param('bookingId') bookingId: string, @Req() req: any) {
+    return this.trackingService.sendStartOtp(bookingId, req.user.vendorId);
   }
 
   /**
-   * STEP 3b: Start Session Verification
-   * Validates Start-OTP. Moves booking status to 'in_progress'.
+   * POST /vendor/tracking/:bookingId/verify-start
+   * Body: { otp: string }
+   * Guards: START_OTP_SENT → date today → OTP valid
+   * Result: IN_PROGRESS, booking.status = 'in_progress'
    */
   @Post(':bookingId/verify-start')
   verifyStart(
@@ -76,36 +97,54 @@ export class VendorTrackingController {
     @Body() dto: VerifyOtpDto,
     @Req() req: any,
   ) {
-    return this.trackingService.verifyOtp(
+    return this.trackingService.verifyStartOtp(
       bookingId,
       req.user.vendorId,
       dto.otp,
-      true,
     );
   }
 
   /**
-   * STEP 4: Completion Evidence
-   * Uploads photos of the finished work.
+   * POST /vendor/tracking/:bookingId/upload-completion
+   * Form-data key: "images" (min 2 files)
+   * Guards: IN_PROGRESS → ≥50% duration elapsed → ≥ 2 images
+   * Result: COMPLETION_PHOTOS_UPLOADED
    */
   @Post(':bookingId/upload-completion')
-  @UseInterceptors(FilesInterceptor('images'))
-  uploadEnd(
+  @UseInterceptors(
+    FilesInterceptor('images', 2, {
+      limits: {
+        fileSize: 2 * 1024 * 1024,
+      },
+    }),
+  )
+  uploadCompletion(
     @Param('bookingId') bookingId: string,
     @UploadedFiles() files: Express.Multer.File[],
     @Req() req: any,
   ) {
-    return this.trackingService.uploadPhotos(
+    return this.trackingService.uploadCompletionPhotos(
       bookingId,
       req.user.vendorId,
       files,
-      'completion',
     );
   }
 
   /**
-   * STEP 5: Final Closure Verification
-   * Validates End-OTP. Moves booking status to 'completed'.
+   * POST /vendor/tracking/:bookingId/request-end-otp
+   * Guards: COMPLETION_PHOTOS_UPLOADED → date today
+   * Result: END_OTP_SENT (OTP sent to client mobile)
+   */
+  @Post(':bookingId/request-end-otp')
+  requestEndOtp(@Param('bookingId') bookingId: string, @Req() req: any) {
+    return this.trackingService.sendEndOtp(bookingId, req.user.vendorId);
+  }
+
+  /**
+   * POST /vendor/tracking/:bookingId/verify-end
+   * Body: { otp: string }
+   * Guards: END_OTP_SENT → OTP valid
+   * Result: COMPLETED, booking.status = 'completed'
    */
   @Post(':bookingId/verify-end')
   verifyEnd(
@@ -113,19 +152,10 @@ export class VendorTrackingController {
     @Body() dto: VerifyOtpDto,
     @Req() req: any,
   ) {
-    return this.trackingService.verifyOtp(
+    return this.trackingService.verifyEndOtp(
       bookingId,
       req.user.vendorId,
       dto.otp,
-      false,
     );
-  }
-
-  /**
-   * EXTRA STEP: Get event location coordinates
-   */
-  @Get(':bookingId/location')
-  getLocation(@Param('bookingId') bookingId: string, @Req() req: any) {
-    return this.trackingService.getOrderLocation(bookingId, req.user.vendorId);
   }
 }

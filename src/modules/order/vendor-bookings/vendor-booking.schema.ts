@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, SchemaTypes, Types } from 'mongoose';
 import { SlotType } from '../../vendoravailability/vendor-availability.schema';
+import { TrackingStatus } from '../vendor-tracking/tracking.enums';
 
 export type VendorBookingDocument = HydratedDocument<VendorBooking>;
 
@@ -55,10 +56,16 @@ export const VendorTierSnapshotSchema =
 // =============================
 @Schema({ timestamps: true })
 export class VendorBooking {
+  @Prop({
+  type: String,
+  enum: Object.values(TrackingStatus),
+  default: TrackingStatus.PENDING,
+  index: true,
+})
+trackingStatus: TrackingStatus;
   // Vendor tracking object
   @Prop({
     type: {
-      status: String,
       arrivedAt: Date,
       arrivalPhotos: [String],
       startedAt: Date,
@@ -68,7 +75,6 @@ export class VendorBooking {
     _id: false,
   })
   tracking?: {
-    status?: string;
     arrivedAt?: Date;
     arrivalPhotos?: string[];
     startedAt?: Date;
@@ -191,6 +197,7 @@ export const VendorBookingSchema = SchemaFactory.createForClass(VendorBooking);
 // =============================
 VendorBookingSchema.index({ vendorId: 1, status: 1, eventDate: 1 });
 VendorBookingSchema.index({ vendorId: 1, payoutStatus: 1 });
+VendorBookingSchema.index({ vendorId: 1, trackingStatus: 1 });
 VendorBookingSchema.index({ orderId: 1 });
 VendorBookingSchema.index({ checkoutBatchId: 1 });
 VendorBookingSchema.index({ userId: 1 });
